@@ -9,6 +9,13 @@ fovY = 120  # Field of view
 GRID_LENGTH = 600  # Length of grid lines
 rand_var = 423
 
+# Maze variables
+path_width = 170
+wall_width = 10
+boundary_width = 15
+wall_height = 300
+
+
 
 def draw_text(x, y, text, font=GLUT_BITMAP_HELVETICA_18):
     glColor3f(1,1,1)
