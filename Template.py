@@ -291,6 +291,40 @@ def draw_walls():
             (co[23],co[15]), (co[23],co[14]), 
              height, colors["BROWN"])
     
+
+
+    cuboids((co[2],co[10]), (co[2],co[15]), 
+            (co[3],co[15]), (co[3],co[10]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[4],co[12]), (co[4],co[13]), 
+            (co[9],co[13]), (co[9],co[12]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[10],co[13]), (co[10],co[15]), 
+            (co[11],co[15]), (co[11],co[13]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[12],co[8]), (co[12],co[15]), 
+            (co[13],co[15]), (co[13],co[8]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[12],co[8]), (co[12],co[12]), 
+            (co[13],co[12]), (co[13],co[8]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[17],co[12]), (co[17],co[13]), 
+            (co[19],co[13]), (co[19],co[12]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[20],co[10]), (co[20],co[15]), 
+            (co[21],co[15]), (co[21],co[10]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[0],co[10]), (co[0],co[11]), 
+            (co[3],co[11]), (co[3],co[10]), 
+             height, colors["BROWN"])
+    
 def draw_shapes():
 
     glPushMatrix()  # Save the current matrix state
