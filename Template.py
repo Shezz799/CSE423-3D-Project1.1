@@ -3,11 +3,18 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 
 # Camera-related variables
-camera_pos = (0,500,500)
+camera_pos = (0,-1000,1000)
 
 fovY = 120  # Field of view
 GRID_LENGTH = 600  # Length of grid lines
 rand_var = 423
+
+# Maze variables
+path_width = 170
+wall_width = 10
+boundary_width = 15
+wall_height = 300
+
 
 
 def draw_text(x, y, text, font=GLUT_BITMAP_HELVETICA_18):
@@ -128,7 +135,7 @@ def setupCamera():
     glMatrixMode(GL_PROJECTION)  # Switch to projection matrix mode
     glLoadIdentity()  # Reset the projection matrix
     # Set up a perspective projection (field of view, aspect ratio, near clip, far clip)
-    gluPerspective(fovY, 1.25, 0.1, 1500) # Think why aspect ration is 1.25?
+    gluPerspective(fovY, 0.88, 0.1, 3000) # Think why aspect ration is 1.25?
     glMatrixMode(GL_MODELVIEW)  # Switch to model-view matrix mode
     glLoadIdentity()  # Reset the model-view matrix
 
@@ -158,24 +165,31 @@ def showScreen():
     # Clear color and depth buffers
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glLoadIdentity()  # Reset modelview matrix
-    glViewport(0, 0, 1000, 800)  # Set viewport size
+    glViewport(0, 0, 960, 1080)  # Set viewport size
 
     setupCamera()  # Configure camera perspective
 
     # Draw a random points
     glPointSize(20)
     glBegin(GL_POINTS)
-    glVertex3f(-GRID_LENGTH, GRID_LENGTH, 0)
+    glColor3f(1,0,0)
+    glVertex3f(-1000, -1000, 0)
+    glColor3f(0,1,0)
+    glVertex3f(-1000, 1000, 0)
+    glColor3f(0,0,1)
+    glVertex3f(1000, 1000, 0)
+    glColor3f(1,1,1)
+    glVertex3f(1000, -1000, 0)
     glEnd()
 
     # Draw the grid (game floor)
     glBegin(GL_QUADS)
     
-    glColor3f(1, 1, 1)
-    glVertex3f(-GRID_LENGTH, GRID_LENGTH, 0)
-    glVertex3f(0, GRID_LENGTH, 0)
-    glVertex3f(0, 0, 0)
-    glVertex3f(-GRID_LENGTH, 0, 0)
+    glColor3f(0.8, 0.52, 0.25)
+    glVertex3f(-1000, -1000, 0)
+    glVertex3f(-1000, 1000, 0)
+    glVertex3f(1000, 1000, 0)
+    glVertex3f(1000, -1000, 0)
 
     # glVertex3f(GRID_LENGTH, -GRID_LENGTH, 0)
     # glVertex3f(0, -GRID_LENGTH, 0)
@@ -209,7 +223,7 @@ def showScreen():
 def main():
     glutInit()
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)  # Double buffering, RGB color, depth test
-    glutInitWindowSize(1000, 800)  # Window size
+    glutInitWindowSize(960, 1080)  # Window size
     glutInitWindowPosition(0, 0)  # Window position
     wind = glutCreateWindow(b"3D OpenGL Intro")  # Create the window
 
