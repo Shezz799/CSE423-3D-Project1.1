@@ -14,7 +14,9 @@ colors = { 'WHITE':(1.0, 1.0, 1.0),
 
 
 # Camera-related variables
-camera_pos = (0,-1000,1000)
+# camera_pos = (0,-1000,1000)
+
+camera_pos = (0,0,2000)
 
 fovY = 120  # Field of view
 GRID = 1000  # Length of grid lines
@@ -188,6 +190,106 @@ def draw_walls():
             (co[23],co[23]), (co[23],co[4]), 
              height, colors["BROWN"])
     
+
+    # insides
+    
+    cuboids((co[0],co[20]), (co[0],co[21]), 
+            (co[6],co[21]), (co[6],co[20]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[10],co[21]), (co[10],co[23]), 
+            (co[11],co[23]), (co[11],co[21]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[12],co[20]), (co[12],co[21]), 
+            (co[19],co[21]), (co[19],co[20]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[18],co[21]), (co[18],co[23]), 
+            (co[19],co[23]), (co[19],co[21]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[20],co[16]), (co[20],co[23]), 
+            (co[21],co[23]), (co[21],co[16]), 
+             height, colors["BROWN"])
+    
+
+
+    cuboids((co[0],co[18]), (co[0],co[19]), 
+            (co[4],co[19]), (co[4],co[18]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[8],co[18]), (co[8],co[20]), 
+            (co[9],co[20]), (co[9],co[18]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[8],co[18]), (co[8],co[19]), 
+            (co[14],co[19]), (co[14],co[18]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[12],co[16]), (co[12],co[21]), 
+            (co[13],co[21]), (co[13],co[16]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[17],co[18]), (co[17],co[19]), 
+            (co[19],co[19]), (co[19],co[18]), 
+             height, colors["BROWN"])
+    
+
+    
+    cuboids((co[3],co[16]), (co[3],co[17]), 
+            (co[5],co[17]), (co[5],co[16]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[6],co[15]), (co[6],co[18]), 
+            (co[7],co[18]), (co[7],co[15]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[6],co[16]), (co[6],co[17]), 
+            (co[13],co[17]), (co[13],co[16]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[14],co[16]), (co[14],co[17]), 
+            (co[16],co[17]), (co[16],co[16]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[18],co[15]), (co[18],co[18]), 
+            (co[19],co[18]), (co[19],co[15]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[18],co[16]), (co[18],co[17]), 
+            (co[21],co[17]), (co[21],co[16]), 
+             height, colors["BROWN"])
+    
+
+
+    cuboids((co[2],co[14]), (co[2],co[15]), 
+            (co[5],co[15]), (co[5],co[14]), 
+             height, colors["BROWN"])
+
+    cuboids((co[4],co[14]), (co[4],co[17]), 
+            (co[5],co[17]), (co[5],co[14]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[8],co[12]), (co[8],co[17]), 
+            (co[9],co[17]), (co[9],co[12]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[10],co[14]), (co[10],co[15]), 
+            (co[15],co[15]), (co[15],co[14]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[14],co[14]), (co[14],co[17]), 
+            (co[15],co[17]), (co[15],co[14]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[16],co[14]), (co[16],co[17]), 
+            (co[17],co[17]), (co[17],co[14]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[20],co[14]), (co[20],co[15]), 
+            (co[23],co[15]), (co[23],co[14]), 
+             height, colors["BROWN"])
     
 def draw_shapes():
 
@@ -317,17 +419,11 @@ def showScreen():
     setupCamera()  # Configure camera perspective
 
     # Draw a random points
-    glPointSize(20)
-    glBegin(GL_POINTS)
-    glColor3f(1,0,0)
-    glVertex3f(-1000, -1000, 0)
-    glColor3f(0,1,0)
-    glVertex3f(-1000, 1000, 0)
-    glColor3f(0,0,1)
-    glVertex3f(1000, 1000, 0)
-    glColor3f(1,1,1)
-    glVertex3f(1000, -1000, 0)
-    glEnd()
+    # glPointSize(20)
+    # glBegin(GL_POINTS)
+    # glColor3f(1,0,0)
+    # glVertex3f(-1000, -1000, 0)
+    # glEnd()
 
     # Draw the grid (game floor)
     glBegin(GL_QUADS)
