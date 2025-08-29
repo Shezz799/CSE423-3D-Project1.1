@@ -321,8 +321,34 @@ def draw_walls():
             (co[21],co[15]), (co[21],co[10]), 
              height, colors["BROWN"])
     
+
+    
     cuboids((co[0],co[10]), (co[0],co[11]), 
             (co[3],co[11]), (co[3],co[10]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[4],co[6]), (co[4],co[13]), 
+            (co[5],co[13]), (co[5],co[6]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[6],co[10]), (co[6],co[11]), 
+            (co[11],co[11]), (co[11],co[10]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[14],co[9]), (co[14],co[13]), 
+            (co[15],co[13]), (co[15],co[9]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[14],co[10]), (co[14],co[11]), 
+            (co[17],co[11]), (co[17],co[10]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[18],co[10]), (co[18],co[13]), 
+            (co[19],co[13]), (co[19],co[10]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[18],co[10]), (co[18],co[11]), 
+            (co[21],co[11]), (co[21],co[10]), 
              height, colors["BROWN"])
     
 def draw_shapes():
