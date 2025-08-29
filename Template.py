@@ -11,6 +11,8 @@ colors = { 'WHITE':(1.0, 1.0, 1.0),
         'YELLOW':(1.0, 1.0, 0.0),
         'BROWN':(0.59, 0.29, 0.0) }
 
+
+
 # Camera-related variables
 camera_pos = (0,-1000,1000)
 
@@ -20,9 +22,32 @@ rand_var = 423
 
 # Maze variables
 p = 170
+w = 10
+b = 15
+height = 300
 
+co = []
 
+i = 0
+dist = -1000
 
+while True:
+
+    co += [dist]
+
+    if i == 0:
+        dist += b
+    elif i==22:
+        dist += b
+        co += [dist]
+        break
+    elif i%2==1:
+        dist += p
+    elif i%2==0:
+        dist += w
+    i += 1
+
+print(co)
 
 def draw_text(x, y, text, font=GLUT_BITMAP_HELVETICA_18):
     glColor3f(1,1,1)
@@ -94,44 +119,76 @@ def cuboids(p1, p2, p3, p4, h, color):
 
     glEnd()
 
-w = 10
-b = 15
-height = 300
+
 
 def draw_walls():
 
+    # #boundaries
+
+    # #back
+    # cuboids((-GRID, GRID-b), (-GRID, GRID), 
+    #         (GRID, GRID),(GRID, GRID-b),
+    #         height,colors['BROWN'])
+
+    # #front
+    # cuboids((-GRID, -GRID), (-GRID, -GRID+b), 
+    #         (GRID, -GRID+b), (GRID, -GRID),
+    #         height, colors['BROWN'])
+    
+    # #left
+    # cuboids((-GRID, -GRID), (-GRID, GRID-2*p-b-w),
+    #         (-GRID+b, GRID-2*p-b-w), (-GRID+b, -GRID),
+    #         height, colors['BROWN'])
+    
+    # cuboids((-GRID, GRID-p-b-w), (-GRID, GRID),
+    #         (-GRID+b, GRID), (-GRID+b, GRID-p-b-w),
+    #         height, colors['BROWN'])
+    
+    # #right
+    # cuboids((GRID-b, -GRID), (GRID-b, -GRID+b+p+w),
+    #         (GRID, -GRID+b+p+w), (GRID, -GRID),
+    #         height, colors['BROWN'])
+    
+    # cuboids((GRID-b, -GRID+b+2*p+w), (GRID-b, GRID),
+    #         (GRID, GRID), (GRID, -GRID+b+2*p+w),
+    #         height, colors['BROWN'])
+    
+
     #boundaries
 
-    #back
-    cuboids((-GRID, GRID-b), (-GRID, GRID), 
-            (GRID, GRID),(GRID, GRID-b),
-            height,colors['BROWN'])
-
     #front
-    cuboids((-GRID, -GRID), (-GRID, -GRID+b), 
-            (GRID, -GRID+b), (GRID, -GRID),
-            height, colors['BROWN'])
-    
+
+    cuboids((co[0], co[0]), (co[0], co[1]), 
+            (co[23], co[1]), (co[23], co[0]), 
+             height, colors["BROWN"])
+
+    #back
+
+    cuboids((co[0],co[22]), (co[0],co[23]), 
+            (co[23],co[23]), (co[23],co[22]),
+             height, colors["BROWN"])
+
     #left
-    cuboids((-GRID, -GRID), (-GRID, GRID-2*p-b-w),
-            (-GRID+b, GRID-2*p-b-w), (-GRID+b, -GRID),
-            height, colors['BROWN'])
+
+    cuboids((co[0],co[0]), (co[0],co[19]), 
+            (co[1],co[19]), (co[1],co[0]), 
+             height, colors["BROWN"])
     
-    cuboids((-GRID, GRID-p-b-w), (-GRID, GRID),
-            (-GRID+b, GRID), (-GRID+b, GRID-p-b-w),
-            height, colors['BROWN'])
+    cuboids((co[0],co[20]), (co[0],co[23]), 
+            (co[1],co[23]), (co[1],co[20]), 
+             height, colors["BROWN"])
     
     #right
-    cuboids((GRID-b, -GRID), (GRID-b, -GRID+b+p+w),
-            (GRID, -GRID+b+p+w), (GRID, -GRID),
-            height, colors['BROWN'])
-    
-    cuboids((GRID-b, -GRID+b+2*p+w), (GRID-b, GRID),
-            (GRID, GRID), (GRID, -GRID+b+2*p+w),
-            height, colors['BROWN'])
-    
 
-
+    cuboids((co[22],co[0]), (co[22],co[3]), 
+            (co[23],co[3]), (co[23],co[0]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[22],co[4]), (co[22],co[23]), 
+            (co[23],co[23]), (co[23],co[4]), 
+             height, colors["BROWN"])
+    
+    
 def draw_shapes():
 
     glPushMatrix()  # Save the current matrix state
