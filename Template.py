@@ -177,29 +177,29 @@ def showScreen():
     glVertex3f(0, 0, 0)
     glVertex3f(-GRID_LENGTH, 0, 0)
 
-    glVertex3f(GRID_LENGTH, -GRID_LENGTH, 0)
-    glVertex3f(0, -GRID_LENGTH, 0)
-    glVertex3f(0, 0, 0)
-    glVertex3f(GRID_LENGTH, 0, 0)
+    # glVertex3f(GRID_LENGTH, -GRID_LENGTH, 0)
+    # glVertex3f(0, -GRID_LENGTH, 0)
+    # glVertex3f(0, 0, 0)
+    # glVertex3f(GRID_LENGTH, 0, 0)
 
 
-    glColor3f(0.7, 0.5, 0.95)
-    glVertex3f(-GRID_LENGTH, -GRID_LENGTH, 0)
-    glVertex3f(-GRID_LENGTH, 0, 0)
-    glVertex3f(0, 0, 0)
-    glVertex3f(0, -GRID_LENGTH, 0)
+    # glColor3f(0.7, 0.5, 0.95)
+    # glVertex3f(-GRID_LENGTH, -GRID_LENGTH, 0)
+    # glVertex3f(-GRID_LENGTH, 0, 0)
+    # glVertex3f(0, 0, 0)
+    # glVertex3f(0, -GRID_LENGTH, 0)
 
-    glVertex3f(GRID_LENGTH, GRID_LENGTH, 0)
-    glVertex3f(GRID_LENGTH, 0, 0)
-    glVertex3f(0, 0, 0)
-    glVertex3f(0, GRID_LENGTH, 0)
+    # glVertex3f(GRID_LENGTH, GRID_LENGTH, 0)
+    # glVertex3f(GRID_LENGTH, 0, 0)
+    # glVertex3f(0, 0, 0)
+    # glVertex3f(0, GRID_LENGTH, 0)
     glEnd()
 
     # Display game info text at a fixed screen position
-    draw_text(10, 770, f"A Random Fixed Position Text")
-    draw_text(10, 740, f"See how the position and variable change?: {rand_var}")
+    # draw_text(10, 770, f"A Random Fixed Position Text")
+    # draw_text(10, 740, f"See how the position and variable change?: {rand_var}")
 
-    draw_shapes()
+    # draw_shapes()
 
     # Swap buffers for smooth rendering (double buffering)
     glutSwapBuffers()
