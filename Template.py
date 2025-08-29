@@ -2,18 +2,25 @@ from OpenGL.GL import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 
+colors = { 'WHITE':(1.0, 1.0, 1.0),
+        'LILAC':(0.85, 0.75, 0.95),
+        'BLUE':(0.0, 0.0, 1.0),
+        'CYAN':(0.0, 1.0, 1.0),
+        'GREEN':(0.0, 1.0, 0.0),
+        'BLACK':(0.0, 0.0, 0.0),
+        'YELLOW':(1.0, 1.0, 0.0),
+        'BROWN':(0.59, 0.29, 0.0) }
+
 # Camera-related variables
 camera_pos = (0,-1000,1000)
 
 fovY = 120  # Field of view
-GRID_LENGTH = 600  # Length of grid lines
+GRID = 1000  # Length of grid lines
 rand_var = 423
 
 # Maze variables
-path_width = 170
-wall_width = 10
-boundary_width = 15
-wall_height = 300
+p = 170
+
 
 
 
@@ -41,6 +48,88 @@ def draw_text(x, y, text, font=GLUT_BITMAP_HELVETICA_18):
     glMatrixMode(GL_PROJECTION)
     glPopMatrix()
     glMatrixMode(GL_MODELVIEW)
+
+def cuboids(p1, p2, p3, p4, h, color):
+
+    glColor3f(*color)
+
+    
+    glBegin(GL_QUADS)
+    
+    #bottom
+    # glVertex3f(p1[0], p1[1], 0)
+    # glVertex3f(p2[0], p2[1], 0)
+    # glVertex3f(p3[0], p3[1], 0)
+    # glVertex3f(p4[0], p4[1], 0)
+
+    #right
+    glVertex3f(p4[0], p4[1], 0)
+    glVertex3f(p4[0], p4[1], h)
+    glVertex3f(p3[0], p3[1], h)
+    glVertex3f(p3[0], p3[1], 0)
+
+    #left
+    glVertex3f(p2[0], p2[1], 0)
+    glVertex3f(p2[0], p2[1], h)
+    glVertex3f(p1[0], p1[1], h)
+    glVertex3f(p1[0], p1[1], 0)
+
+    #back
+    glVertex3f(p2[0], p2[1], 0)
+    glVertex3f(p2[0], p2[1], h)
+    glVertex3f(p3[0], p3[1], h)
+    glVertex3f(p3[0], p3[1], 0)
+
+    #front
+    glVertex3f(p1[0], p1[1], 0)
+    glVertex3f(p1[0], p1[1], h)
+    glVertex3f(p4[0], p4[1], h)
+    glVertex3f(p4[0], p4[1], 0)
+
+    #top
+    glVertex3f(p1[0], p1[1], h)
+    glVertex3f(p2[0], p2[1], h)
+    glVertex3f(p3[0], p3[1], h)
+    glVertex3f(p4[0], p4[1], h)
+
+    glEnd()
+
+w = 10
+b = 15
+height = 300
+
+def draw_walls():
+
+    #boundaries
+
+    #back
+    cuboids((-GRID, GRID-b), (-GRID, GRID), 
+            (GRID, GRID),(GRID, GRID-b),
+            height,colors['BROWN'])
+
+    #front
+    cuboids((-GRID, -GRID), (-GRID, -GRID+b), 
+            (GRID, -GRID+b), (GRID, -GRID),
+            height, colors['BROWN'])
+    
+    #left
+    cuboids((-GRID, -GRID), (-GRID, GRID-2*p-b-w),
+            (-GRID+b, GRID-2*p-b-w), (-GRID+b, -GRID),
+            height, colors['BROWN'])
+    
+    cuboids((-GRID, GRID-p-b-w), (-GRID, GRID),
+            (-GRID+b, GRID), (-GRID+b, GRID-p-b-w),
+            height, colors['BROWN'])
+    
+    #right
+    cuboids((GRID-b, -GRID), (GRID-b, -GRID+b+p+w),
+            (GRID, -GRID+b+p+w), (GRID, -GRID),
+            height, colors['BROWN'])
+    
+    cuboids((GRID-b, -GRID+b+2*p+w), (GRID-b, GRID),
+            (GRID, GRID), (GRID, -GRID+b+2*p+w),
+            height, colors['BROWN'])
+    
 
 
 def draw_shapes():
@@ -100,18 +189,18 @@ def specialKeyListener(key, x, y):
     global camera_pos
     x, y, z = camera_pos
     # Move camera up (UP arrow key)
-    # if key == GLUT_KEY_UP:
-
-    # # Move camera down (DOWN arrow key)
-    # if key == GLUT_KEY_DOWN:
-
+    if key == GLUT_KEY_UP:
+        y += 10
+    # Move camera down (DOWN arrow key)
+    if key == GLUT_KEY_DOWN:
+        y-=10
     # moving camera left (LEFT arrow key)
     if key == GLUT_KEY_LEFT:
-        x -= 1  # Small angle decrement for smooth movement
+        x -= 10  # Small angle decrement for smooth movement
 
     # moving camera right (RIGHT arrow key)
     if key == GLUT_KEY_RIGHT:
-        x += 1  # Small angle increment for smooth movement
+        x += 10  # Small angle increment for smooth movement
 
     camera_pos = (x, y, z)
 
@@ -125,6 +214,7 @@ def mouseListener(button, state, x, y):
 
         # # Right mouse button toggles camera tracking mode
         # if button == GLUT_RIGHT_BUTTON and state == GLUT_DOWN:
+
 
 
 def setupCamera():
@@ -191,24 +281,11 @@ def showScreen():
     glVertex3f(1000, 1000, 0)
     glVertex3f(1000, -1000, 0)
 
-    # glVertex3f(GRID_LENGTH, -GRID_LENGTH, 0)
-    # glVertex3f(0, -GRID_LENGTH, 0)
-    # glVertex3f(0, 0, 0)
-    # glVertex3f(GRID_LENGTH, 0, 0)
-
-
-    # glColor3f(0.7, 0.5, 0.95)
-    # glVertex3f(-GRID_LENGTH, -GRID_LENGTH, 0)
-    # glVertex3f(-GRID_LENGTH, 0, 0)
-    # glVertex3f(0, 0, 0)
-    # glVertex3f(0, -GRID_LENGTH, 0)
-
-    # glVertex3f(GRID_LENGTH, GRID_LENGTH, 0)
-    # glVertex3f(GRID_LENGTH, 0, 0)
-    # glVertex3f(0, 0, 0)
-    # glVertex3f(0, GRID_LENGTH, 0)
+    
+   
     glEnd()
 
+    draw_walls()
     # Display game info text at a fixed screen position
     # draw_text(10, 770, f"A Random Fixed Position Text")
     # draw_text(10, 740, f"See how the position and variable change?: {rand_var}")
@@ -234,6 +311,7 @@ def main():
     glutIdleFunc(idle)  # Register the idle function to move the bullet automatically
 
     glutMainLoop()  # Enter the GLUT main loop
+
 
 if __name__ == "__main__":
     main()
