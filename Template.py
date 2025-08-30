@@ -40,17 +40,10 @@ camera_radius = 1000  # Distance from origin
 camera_angle = 0      # Angle around origin in degrees
 camera_height = 1200
 
-# Player position variables
-player_x = 0.0
-player_y = -400.0
-player_movement_speed = 30.0
-player_radius = 25.0
+co = []
 
-# Mouse camera control variables
-mouse_x = 480  # Center of window width (960/2)
-mouse_y = 540  # Center of window height (1080/2)
-mouse_sensitivity = 0.2
-
+i = 0
+dist = -1000
 
 # Maze variables
 # p = 158
@@ -60,11 +53,6 @@ p = 170
 w = 10
 b = 15
 height = 300
-
-co = []
-
-i = 0
-dist = -1000
 
 while True:
 
@@ -83,6 +71,23 @@ while True:
     i += 1
 
 print(co)
+
+
+# Player position variables
+player_x = (co[1] + co[2]) // 2
+player_y = (co[19] + co[20]) // 2
+player_movement_speed = 30.0
+player_radius = 5.0
+
+# Mouse camera control variables
+mouse_x = 480  # Center of window width (960/2)
+mouse_y = 540  # Center of window height (1080/2)
+mouse_sensitivity = 0.2
+
+
+
+
+
 
 # Build wall rectangles (for drawing and collision)
 walls_rects = []
@@ -286,7 +291,7 @@ def is_valid_position(x, y):
             return False
     return True
 
-#=============== Character Model ===============
+#=============== Character Model===============
 
 CHAR_HEAD = (40.0-25, 40.0-25, 40.0-25)
 CHAR_TORSO = (60.0-35, 30.0-20, 80.0-50)
@@ -316,6 +321,11 @@ def draw_character(position):
 
     glPushMatrix()
     glTranslatef(x, y, z)
+
+    try:
+        glRotatef(player_yaw, .0, 0.0, 1.0)
+    except NameError:
+        pass
 
     # Legs
     leg_x_offset = (torso_w * 0.33)
@@ -370,7 +380,30 @@ def draw_character(position):
     glPopMatrix()
 
     glPopMatrix()
-#=============== Character Model END ===============
+#=============== Character Model===============
+
+
+#============ First person ============
+
+player_yaw = 90
+yaw_step = 10.0
+eye_height = 120.0
+
+
+first_person = True
+
+def _move_along_facing(forward_deg: float):
+    global player_x, player_y
+    step = player_movement_speed
+    rad = math.radians(forward_deg)
+    dx = step * math.sin(rad)
+    dy = step * math.cos(rad)
+    new_x = player_x + dx
+    new_y = player_y + dy
+    if is_valid_position(new_x, new_y):
+        player_x, player_y = new_x, new_y
+
+#============ First person ============
 
 
 
@@ -564,56 +597,54 @@ def keyboardListener(key, x, y):
     """
     Handles keyboard inputs for player movement, gun rotation, camera updates, and cheat mode toggles.
     """
-    global camera_height, player_x, player_y
-    
-    # Player Movement Controls (WASD)
-    new_x, new_y = player_x, player_y
-    
-    # Move forward (W key)
-    if key == b'w':
-        new_y += player_movement_speed
-    
-    # Move backward (S key)
-    if key == b's':
-        new_y -= player_movement_speed
-    
-    # Move left (A key)
-    if key == b'a':
-        new_x -= player_movement_speed
-    
-    # Move right (D key)
-    if key == b'd':
-        new_x += player_movement_speed
-    
-    # Check collision and update position only if valid
-    if is_valid_position(new_x, new_y):
-        player_x, player_y = new_x, new_y
-    
-    # Camera height controls for testing
-    if key == b'i':
-        camera_height -= 50
-    
-    if key == b'o':
-        camera_height += 50
+    global camera_height, player_x, player_y, camera_angle, player_yaw, eye_height, first_person
+
+    if key in (b'w', b'W', b's', b'S', b'a', b'A', b'd', b'D', b'i', b'I', b'o', b'O', b'f', b'F'):
+        if key in (b'd', b'D'):
+            player_yaw = (player_yaw + yaw_step) % 360.0
+            camera_angle = (camera_angle + yaw_step) % 360.0
+        elif key in (b'a', b'A'):
+            player_yaw = (player_yaw - yaw_step) % 360.0
+            camera_angle = (camera_angle - yaw_step) % 360.0
+        elif key in (b'w', b'W'):
+            _move_along_facing(player_yaw)
+        elif key in (b's', b'S'):
+            _move_along_facing((player_yaw + 180.0) % 360.0)
+        # toggle first-person view
+        elif key in (b'f', b'F'):
+            first_person = not first_person
+            if not first_person:
+                camera_angle = player_yaw % 360.0
+
+        # Camera height adjust
+        if key in (b'i', b'I'):
+            camera_height -= 50
+            eye_height = max(20.0, eye_height - 10.0)
+        if key in (b'o', b'O'):
+            camera_height += 50
+            eye_height = min(250.0, eye_height + 10.0)
+        return
 
 
 def specialKeyListener(key, x, y):
     
-    global camera_radius, camera_angle
+    global camera_radius, camera_angle, player_yaw, first_person
 
     if key == GLUT_KEY_LEFT:
-        camera_angle += 5  # Rotate left
+        camera_angle = (camera_angle + 5) % 360.0  # Rotate left
+        if first_person:
+            player_yaw = camera_angle
     elif key == GLUT_KEY_RIGHT:
-        camera_angle -= 5  # Rotate right
+        camera_angle = (camera_angle - 5) % 360.0  # Rotate right
+        if first_person:
+            player_yaw = camera_angle
     elif key == GLUT_KEY_UP:
         if camera_radius != 1:
                 if camera_radius == 50:
                         camera_radius -= 49
                 else:
                     camera_radius -= 50
-          # Zoom in
     elif key == GLUT_KEY_DOWN:
-        
         camera_radius += 50  # Zoom out
 
 #     """
@@ -680,6 +711,7 @@ def setupCamera():
     Configures the camera's projection and view settings.
     Uses a perspective projection and positions the camera to follow the player smoothly.
     """
+    global camera_angle
     glMatrixMode(GL_PROJECTION)  # Switch to projection matrix mode
     glLoadIdentity()  # Reset the projection matrix
     # Set up a perspective projection (field of view, aspect ratio, near clip, far clip)
@@ -687,23 +719,28 @@ def setupCamera():
     glMatrixMode(GL_MODELVIEW)  # Switch to model-view matrix mode
     glLoadIdentity()  # Reset the model-view matrix
     
-    # Camera follows player with offset based on angle
-    angle_rad = math.radians(camera_angle)
-    
-    # Camera position relative to player
-    camera_offset_x = camera_radius * math.sin(angle_rad)
-    camera_offset_y = camera_radius * math.cos(angle_rad)
-    
-    # Camera position in world coordinates (following player)
-    camera_x = player_x + camera_offset_x
-    camera_y = player_y + camera_offset_y
-    camera_z = camera_height
-    
-    # Position the camera and look at the player
-    gluLookAt(camera_x, camera_y, camera_z,  # Camera position
-              player_x, player_y, 50.0,      # Look-at target (player position with slight Z offset)
-              0, 0, 1)                      # Up vector (z-axis)
-
+    if first_person:
+        camera_angle = player_yaw
+        angle_rad = math.radians(player_yaw)
+        camera_x = player_x
+        camera_y = player_y
+        camera_z = eye_height
+        target_x = camera_x + math.sin(angle_rad) * 100.0
+        target_y = camera_y + math.cos(angle_rad) * 100.0
+        target_z = camera_z
+        gluLookAt(camera_x, camera_y, camera_z,
+                  target_x, target_y, target_z,
+                  0, 0, 1)
+    else:
+        angle_rad = math.radians(camera_angle)
+        camera_offset_x = camera_radius * math.sin(angle_rad)
+        camera_offset_y = camera_radius * math.cos(angle_rad)
+        camera_x = player_x + camera_offset_x
+        camera_y = player_y + camera_offset_y
+        camera_z = camera_height
+        gluLookAt(camera_x, camera_y, camera_z,
+                  player_x, player_y, 50.0,
+                  0, 0, 1)
 
 def idle():
     """
