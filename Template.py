@@ -458,10 +458,10 @@ def draw_walls():
 
 #=============== Character Model ===============
 
-CHAR_HEAD = (40.0, 40.0, 40.0)
-CHAR_TORSO = (60.0, 30.0, 80.0)
-CHAR_ARM = (24.0, 22.0, 70.0)
-CHAR_LEG = (24.0, 22.0, 70.0)
+CHAR_HEAD = (40.0-25, 40.0-25, 40.0-25)
+CHAR_TORSO = (60.0-35, 30.0-20, 80.0-50)
+CHAR_ARM = (24.0-15, 22.0-15, 70.0-45)
+CHAR_LEG = (24.0-15, 22.0-15, 70.0-45)
 
 def _draw_cuboid(w, d, h, color):
     glColor3f(*color)
@@ -720,7 +720,7 @@ def showScreen():
     
    
     glEnd()
-    
+
     draw_walls()
     draw_character((0.0, -400.0, 0.0))
     # Display game info text at a fixed screen position
