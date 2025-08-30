@@ -453,6 +453,96 @@ def draw_walls():
             (co[17],co[2]), (co[17],co[0]),
              height, colors["BROWN"])
     
+
+
+
+#=============== Character Model ===============
+
+CHAR_HEAD = (40.0, 40.0, 40.0)
+CHAR_TORSO = (60.0, 30.0, 80.0)
+CHAR_ARM = (24.0, 22.0, 70.0)
+CHAR_LEG = (24.0, 22.0, 70.0)
+
+def _draw_cuboid(w, d, h, color):
+    glColor3f(*color)
+    glPushMatrix()
+    glScalef(w, d, h)
+    glutSolidCube(1.0)
+    glPopMatrix()
+
+def draw_character(position):
+    x, y, z = position
+
+    # palette
+    skin = (1.0, 0.85, 0.7)
+    shirt = (0.2, 0.5, 0.9)
+    pants = (0.15, 0.25, 0.55)
+    boots = (0.25, 0.12, 0.05)
+
+    torso_w, torso_d, torso_h = CHAR_TORSO
+    head_w, head_d, head_h = CHAR_HEAD
+    arm_w, arm_d, arm_h = CHAR_ARM
+    leg_w, leg_d, leg_h = CHAR_LEG
+
+    glPushMatrix()
+    glTranslatef(x, y, z)
+
+    # Legs
+    leg_x_offset = (torso_w * 0.33)
+    leg_y_offset = (torso_d * 0.25)
+    leg_z = leg_h * 0.5
+
+    glPushMatrix()
+    glTranslatef(-leg_x_offset, -leg_y_offset, leg_z)
+    _draw_cuboid(leg_w, leg_d, leg_h, pants)
+    glTranslatef(0.0, 0.0, -leg_h * 0.5 + 10.0)
+    _draw_cuboid(leg_w, leg_d, 16.0, boots)
+    glPopMatrix()
+
+    glPushMatrix()
+    glTranslatef(+leg_x_offset, +leg_y_offset, leg_z)
+    _draw_cuboid(leg_w, leg_d, leg_h, pants)
+    glTranslatef(0.0, 0.0, -leg_h * 0.5 + 10.0)
+    _draw_cuboid(leg_w, leg_d, 16.0, boots)
+    glPopMatrix()
+
+    # Torso
+    torso_z = leg_h + torso_h * 0.5
+    glPushMatrix()
+    glTranslatef(0.0, 0.0, torso_z)
+    _draw_cuboid(torso_w, torso_d, torso_h, shirt)
+    glPopMatrix()
+
+    # Arms
+    arm_x_offset = torso_w * 0.5 + arm_w * 0.55
+    arm_y_offset = torso_d * 0.05
+    arm_z = leg_h + torso_h - arm_h * 0.5 + 5.0
+
+    glPushMatrix()
+    glTranslatef(-arm_x_offset, -arm_y_offset, arm_z)
+    _draw_cuboid(arm_w, arm_d, arm_h, skin)
+    glTranslatef(0.0, 0.0, -arm_h * 0.5 + 10.0)
+    _draw_cuboid(arm_w, arm_d, 20.0, skin)
+    glPopMatrix()
+
+    glPushMatrix()
+    glTranslatef(+arm_x_offset, +arm_y_offset, arm_z)
+    _draw_cuboid(arm_w, arm_d, arm_h, skin)
+    glTranslatef(0.0, 0.0, -arm_h * 0.5 + 10.0)
+    _draw_cuboid(arm_w, arm_d, 20.0, skin)
+    glPopMatrix()
+
+    # Head
+    head_z = leg_h + torso_h + head_h * 0.5 + 4.0
+    glPushMatrix()
+    glTranslatef(0.0, 0.0, head_z)
+    _draw_cuboid(head_w, head_d, head_h, skin)
+    glPopMatrix()
+
+    glPopMatrix()
+#=============== Character Model END ===============
+
+
 def draw_shapes():
 
     glPushMatrix()  # Save the current matrix state
@@ -630,8 +720,9 @@ def showScreen():
     
    
     glEnd()
-
+    
     draw_walls()
+    draw_character((0.0, -400.0, 0.0))
     # Display game info text at a fixed screen position
     # draw_text(10, 770, f"A Random Fixed Position Text")
     # draw_text(10, 740, f"See how the position and variable change?: {rand_var}")
