@@ -76,13 +76,13 @@ print(co)
 # Player position variables
 player_x = (co[1] + co[2]) // 2
 player_y = (co[19] + co[20]) // 2
-player_movement_speed = 30.0
+player_movement_speed = 20.0
 player_radius = 5.0
 
 # Mouse camera control variables
 mouse_x = 480  # Center of window width (960/2)
 mouse_y = 540  # Center of window height (1080/2)
-mouse_sensitivity = 0.2
+mouse_sensitivity = 0.12
 
 
 
@@ -386,7 +386,7 @@ def draw_character(position):
 #============ First person ============
 
 player_yaw = 90
-yaw_step = 10.0
+yaw_step = 4.0
 eye_height = 120.0
 
 
@@ -631,11 +631,11 @@ def specialKeyListener(key, x, y):
     global camera_radius, camera_angle, player_yaw, first_person
 
     if key == GLUT_KEY_LEFT:
-        camera_angle = (camera_angle + 5) % 360.0  # Rotate left
+        camera_angle = (camera_angle + 3) % 360.0  # Rotate left
         if first_person:
             player_yaw = camera_angle
     elif key == GLUT_KEY_RIGHT:
-        camera_angle = (camera_angle - 5) % 360.0  # Rotate right
+        camera_angle = (camera_angle - 3) % 360.0  # Rotate right
         if first_person:
             player_yaw = camera_angle
     elif key == GLUT_KEY_UP:
@@ -695,10 +695,7 @@ def mouseMotionListener(x, y):
     camera_angle -= delta_x * mouse_sensitivity  # Negative for natural mouse look
     
     # Keep camera angle within bounds (0-360 degrees)
-    if camera_angle > 360:
-        camera_angle -= 360
-    elif camera_angle < 0:
-        camera_angle += 360
+    camera_angle = (camera_angle + 360.0) % 360.0
     
     # Update mouse position for next frame
     mouse_x = x
