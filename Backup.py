@@ -1,664 +1,170 @@
-from OpenGL.GL import *
-from OpenGL.GLUT import *
-from OpenGL.GLU import *
-import math
-
-colors = { 'WHITE':(1.0, 1.0, 1.0),
-        'LILAC':(0.85, 0.75, 0.95),
-        'BLUE':(0.0, 0.0, 1.0),
-        'CYAN':(0.0, 1.0, 1.0),
-        'GREEN':(0.0, 1.0, 0.0),
-        'BLACK':(0.0, 0.0, 0.0),
-        'YELLOW':(1.0, 1.0, 0.0),
-        'BROWN':(0.59, 0.29, 0.0) }
+# Fire effect constants
+NUM_PARTICLES = 200
+FIRE_MAX_HEIGHT = 80.0  # Controls how high sparks go
+FIRE_SPEED = 0.8        # Controls how fast sparks rise
+# particle data
+fire_particles = []      
 
 
+WAVE_SUBDIV = 20      # Grid resolution for the water surface
+WAVE_AMPLITUDE = 3.0  # How high the waves are
 
+#Traps n all
 
+def water_patch(x1, y1, x2, y2):
+    # Animate using a continuous time value.
+    t = time.perf_counter()
+    # Set water level above the ground.
+    base_height = 5.0
+    # Calculate size of each quad in the water grid.
+    step_x = (x2 - x1) / float(WAVE_SUBDIV)
+    step_y = (y2 - y1) / float(WAVE_SUBDIV)
+    # Draw the boundary of the water patch.
+    cuboids((x1, y1), (x1, y2), (x2, y2), (x2, y1), 2, (0.27, 0.51, 0.71))
 
-
-fovY = 120  # Field of view
-GRID = 1000  # Length of grid lines
-rand_var = 423
-
-
-# Camera-related variables
-camera_radius = 1000  # Distance from origin
-camera_angle = 0      # Angle around origin in degrees
-camera_height = 1200
-
-
-# Maze variables
-# p = 158
-# w = 20
-# b = 31
-p = 170
-w = 10
-b = 15
-height = 300
-
-co = []
-
-i = 0
-dist = -1000
-
-while True:
-
-    co += [dist]
-
-    if i == 0:
-        dist += b
-    elif i==22:
-        dist += b
-        co += [dist]
-        break
-    elif i%2==1:
-        dist += p
-    elif i%2==0:
-        dist += w
-    i += 1
-
-print(co)
-
-def draw_text(x, y, text, font=GLUT_BITMAP_HELVETICA_18):
-    glColor3f(1,1,1)
-    glMatrixMode(GL_PROJECTION)
-    glPushMatrix()
-    glLoadIdentity()
-    
-    # Set up an orthographic projection that matches window coordinates
-    gluOrtho2D(0, 1000, 0, 800)  # left, right, bottom, top
-
-    
-    glMatrixMode(GL_MODELVIEW)
-    glPushMatrix()
-    glLoadIdentity()
-    
-    # Draw text at (x, y) in screen coordinates
-    glRasterPos2f(x, y)
-    for ch in text:
-        glutBitmapCharacter(font, ord(ch))
-    
-    # Restore original projection and modelview matrices
-    glPopMatrix()
-    glMatrixMode(GL_PROJECTION)
-    glPopMatrix()
-    glMatrixMode(GL_MODELVIEW)
-
-def cuboids(p1, p2, p3, p4, h, color):
-
-    glColor3f(*color)
-
-    
     glBegin(GL_QUADS)
-    
-    #bottom
-    # glVertex3f(p1[0], p1[1], 0)
-    # glVertex3f(p2[0], p2[1], 0)
-    # glVertex3f(p3[0], p3[1], 0)
-    # glVertex3f(p4[0], p4[1], 0)
+    # Loop through the grid to create the water mesh.
+    for i in range(WAVE_SUBDIV):
+        for j in range(WAVE_SUBDIV):
+            # Get the four (x, y) corners of the current quad.
+            vx0 = x1 + i * step_x
+            vy0 = y1 + j * step_y
+            vx1 = vx0 + step_x
+            vy1 = vy0 + step_y
 
-    #right
-    glVertex3f(p4[0], p4[1], 0)
-    glVertex3f(p4[0], p4[1], h)
-    glVertex3f(p3[0], p3[1], h)
-    glVertex3f(p3[0], p3[1], 0)
+            # Calculate vertex Z-height using sine waves for a ripple effect.
+            z00 = base_height + math.sin((vx0 * 0.02 + t * 2.0)) * WAVE_AMPLITUDE * 2 + math.cos((vy0 * 0.015 - t * 1.5)) * WAVE_AMPLITUDE
+            z01 = base_height + math.sin((vx0 * 0.02 + t * 2.0)) * WAVE_AMPLITUDE * 2 + math.cos((vy1 * 0.015 - t * 1.5)) * WAVE_AMPLITUDE
+            z10 = base_height + math.sin((vx1 * 0.02 + t * 2.0)) * WAVE_AMPLITUDE * 2 + math.cos((vy0 * 0.015 - t * 1.5)) * WAVE_AMPLITUDE
+            z11 = base_height + math.sin((vx1 * 0.02 + t * 2.0)) * WAVE_AMPLITUDE * 2 + math.cos((vy1 * 0.015 - t * 1.5)) * WAVE_AMPLITUDE
 
-    #left
-    glVertex3f(p2[0], p2[1], 0)
-    glVertex3f(p2[0], p2[1], h)
-    glVertex3f(p1[0], p1[1], h)
-    glVertex3f(p1[0], p1[1], 0)
-
-    #back
-    glVertex3f(p2[0], p2[1], 0)
-    glVertex3f(p2[0], p2[1], h)
-    glVertex3f(p3[0], p3[1], h)
-    glVertex3f(p3[0], p3[1], 0)
-
-    #front
-    glVertex3f(p1[0], p1[1], 0)
-    glVertex3f(p1[0], p1[1], h)
-    glVertex3f(p4[0], p4[1], h)
-    glVertex3f(p4[0], p4[1], 0)
-
-    #top
-    glVertex3f(p1[0], p1[1], h)
-    glVertex3f(p2[0], p2[1], h)
-    glVertex3f(p3[0], p3[1], h)
-    glVertex3f(p4[0], p4[1], h)
-
+            # Set color and draw the quad.
+            glColor3f(0.4, 0.7, 0.9)
+            glVertex3f(vx0, vy0, z00)
+            glVertex3f(vx1, vy0, z10)
+            glVertex3f(vx1, vy1, z11)
+            glVertex3f(vx0, vy1, z01)
     glEnd()
 
-
-
-def draw_walls():
-
-    # #boundaries
-
-    # #back
-    # cuboids((-GRID, GRID-b), (-GRID, GRID), 
-    #         (GRID, GRID),(GRID, GRID-b),
-    #         height,colors['BROWN'])
-
-    # #front
-    # cuboids((-GRID, -GRID), (-GRID, -GRID+b), 
-    #         (GRID, -GRID+b), (GRID, -GRID),
-    #         height, colors['BROWN'])
-    
-    # #left
-    # cuboids((-GRID, -GRID), (-GRID, GRID-2*p-b-w),
-    #         (-GRID+b, GRID-2*p-b-w), (-GRID+b, -GRID),
-    #         height, colors['BROWN'])
-    
-    # cuboids((-GRID, GRID-p-b-w), (-GRID, GRID),
-    #         (-GRID+b, GRID), (-GRID+b, GRID-p-b-w),
-    #         height, colors['BROWN'])
-    
-    # #right
-    # cuboids((GRID-b, -GRID), (GRID-b, -GRID+b+p+w),
-    #         (GRID, -GRID+b+p+w), (GRID, -GRID),
-    #         height, colors['BROWN'])
-    
-    # cuboids((GRID-b, -GRID+b+2*p+w), (GRID-b, GRID),
-    #         (GRID, GRID), (GRID, -GRID+b+2*p+w),
-    #         height, colors['BROWN'])
-    
-
-    #boundaries
-
-    #front
-
-    cuboids((co[0], co[0]), (co[0], co[1]), 
-            (co[23], co[1]), (co[23], co[0]), 
-             height, colors["BROWN"])
-
-    #back
-
-    cuboids((co[0],co[22]), (co[0],co[23]), 
-            (co[23],co[23]), (co[23],co[22]),
-             height, colors["BROWN"])
-
-    #left
-
-    cuboids((co[0],co[0]), (co[0],co[19]), 
-            (co[1],co[19]), (co[1],co[0]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[0],co[20]), (co[0],co[23]), 
-            (co[1],co[23]), (co[1],co[20]), 
-             height, colors["BROWN"])
-    
-    #right
-
-    cuboids((co[22],co[0]), (co[22],co[3]), 
-            (co[23],co[3]), (co[23],co[0]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[22],co[4]), (co[22],co[23]), 
-            (co[23],co[23]), (co[23],co[4]), 
-             height, colors["BROWN"])
-    
-
-    # insides
-    
-    cuboids((co[0],co[20]), (co[0],co[21]), 
-            (co[6],co[21]), (co[6],co[20]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[10],co[21]), (co[10],co[23]), 
-            (co[11],co[23]), (co[11],co[21]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[12],co[20]), (co[12],co[21]), 
-            (co[19],co[21]), (co[19],co[20]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[18],co[21]), (co[18],co[23]), 
-            (co[19],co[23]), (co[19],co[21]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[20],co[16]), (co[20],co[23]), 
-            (co[21],co[23]), (co[21],co[16]), 
-             height, colors["BROWN"])
-    
-
-
-    cuboids((co[0],co[18]), (co[0],co[19]), 
-            (co[4],co[19]), (co[4],co[18]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[8],co[18]), (co[8],co[20]), 
-            (co[9],co[20]), (co[9],co[18]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[8],co[18]), (co[8],co[19]), 
-            (co[14],co[19]), (co[14],co[18]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[12],co[16]), (co[12],co[21]), 
-            (co[13],co[21]), (co[13],co[16]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[17],co[18]), (co[17],co[19]), 
-            (co[19],co[19]), (co[19],co[18]), 
-             height, colors["BROWN"])
-    
-
-    
-    cuboids((co[3],co[16]), (co[3],co[17]), 
-            (co[5],co[17]), (co[5],co[16]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[6],co[15]), (co[6],co[18]), 
-            (co[7],co[18]), (co[7],co[15]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[6],co[16]), (co[6],co[17]), 
-            (co[13],co[17]), (co[13],co[16]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[14],co[16]), (co[14],co[17]), 
-            (co[16],co[17]), (co[16],co[16]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[18],co[15]), (co[18],co[18]), 
-            (co[19],co[18]), (co[19],co[15]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[18],co[16]), (co[18],co[17]), 
-            (co[21],co[17]), (co[21],co[16]), 
-             height, colors["BROWN"])
-    
-
-
-    cuboids((co[2],co[14]), (co[2],co[15]), 
-            (co[5],co[15]), (co[5],co[14]), 
-             height, colors["BROWN"])
-
-    cuboids((co[4],co[14]), (co[4],co[17]), 
-            (co[5],co[17]), (co[5],co[14]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[8],co[12]), (co[8],co[17]), 
-            (co[9],co[17]), (co[9],co[12]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[10],co[14]), (co[10],co[15]), 
-            (co[15],co[15]), (co[15],co[14]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[14],co[14]), (co[14],co[17]), 
-            (co[15],co[17]), (co[15],co[14]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[16],co[14]), (co[16],co[17]), 
-            (co[17],co[17]), (co[17],co[14]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[20],co[14]), (co[20],co[15]), 
-            (co[23],co[15]), (co[23],co[14]), 
-             height, colors["BROWN"])
-    
-
-
-    cuboids((co[2],co[10]), (co[2],co[15]), 
-            (co[3],co[15]), (co[3],co[10]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[4],co[12]), (co[4],co[13]), 
-            (co[9],co[13]), (co[9],co[12]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[10],co[13]), (co[10],co[15]), 
-            (co[11],co[15]), (co[11],co[13]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[12],co[8]), (co[12],co[15]), 
-            (co[13],co[15]), (co[13],co[8]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[12],co[8]), (co[12],co[12]), 
-            (co[13],co[12]), (co[13],co[8]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[17],co[12]), (co[17],co[13]), 
-            (co[19],co[13]), (co[19],co[12]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[20],co[10]), (co[20],co[15]), 
-            (co[21],co[15]), (co[21],co[10]), 
-             height, colors["BROWN"])
-    
-
-    
-    cuboids((co[0],co[10]), (co[0],co[11]), 
-            (co[3],co[11]), (co[3],co[10]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[4],co[6]), (co[4],co[13]), 
-            (co[5],co[13]), (co[5],co[6]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[6],co[10]), (co[6],co[11]), 
-            (co[11],co[11]), (co[11],co[10]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[14],co[9]), (co[14],co[13]), 
-            (co[15],co[13]), (co[15],co[9]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[14],co[10]), (co[14],co[11]), 
-            (co[17],co[11]), (co[17],co[10]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[18],co[10]), (co[18],co[13]), 
-            (co[19],co[13]), (co[19],co[10]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[18],co[10]), (co[18],co[11]), 
-            (co[21],co[11]), (co[21],co[10]), 
-             height, colors["BROWN"])
-    
-
-
-    cuboids((co[6],co[8]), (co[6],co[11]), 
-            (co[7],co[11]), (co[7],co[8]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[6],co[8]), (co[6],co[9]), 
-            (co[9],co[9]), (co[9],co[8]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[10],co[5]), (co[10],co[11]), 
-            (co[11],co[11]), (co[11],co[5]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[10],co[8]), (co[10],co[9]), 
-            (co[13],co[9]), (co[13],co[8]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[16],co[6]), (co[16],co[11]), 
-            (co[17],co[11]), (co[17],co[6]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[16],co[8]), (co[16],co[9]), 
-            (co[23],co[9]), (co[23],co[8]), 
-             height, colors["BROWN"])
-    
-
-
-    cuboids((co[2],co[0]), (co[2],co[8]), 
-            (co[3],co[8]), (co[3],co[0]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[4],co[6]), (co[4],co[7]), 
-            (co[6],co[7]), (co[6],co[6]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[8],co[2]), (co[8],co[9]), 
-            (co[9],co[9]), (co[9],co[2]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[12],co[6]), (co[12],co[7]), 
-            (co[17],co[7]), (co[17],co[6]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[18],co[6]), (co[18],co[7]), 
-            (co[20],co[7]), (co[20],co[6]), 
-             height, colors["BROWN"])
-    
-
-    cuboids((co[4],co[4]), (co[4],co[5]), 
-            (co[9],co[5]), (co[9],co[4]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[12],co[2]), (co[12],co[7]), 
-            (co[13],co[7]), (co[13],co[2]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[14],co[5]), (co[14],co[7]), 
-            (co[15],co[7]), (co[15],co[5]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[17],co[4]), (co[17],co[5]), 
-            (co[23],co[5]), (co[23],co[4]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[18],co[5]), (co[18],co[7]), 
-            (co[19],co[7]), (co[19],co[5]), 
-             height, colors["BROWN"])
-    
-
-    cuboids((co[4],co[3]), (co[4],co[5]), 
-            (co[5],co[5]), (co[5],co[3]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[6],co[2]), (co[6],co[3]), 
-            (co[10],co[3]), (co[10],co[2]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[12],co[2]), (co[12],co[3]), 
-            (co[14],co[3]), (co[14],co[2]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[19],co[2]), (co[19],co[3]), 
-            (co[23],co[3]), (co[23],co[2]), 
-             height, colors["BROWN"])
-    
-    cuboids((co[6],co[0]), (co[6],co[3]), 
-            (co[7],co[3]), (co[7],co[0]),
-             height, colors["BROWN"])
-    
-    cuboids((co[16],co[0]), (co[16],co[2]), 
-            (co[17],co[2]), (co[17],co[0]),
-             height, colors["BROWN"])
-    
-def draw_shapes():
-
-    glPushMatrix()  # Save the current matrix state
-    glColor3f(1, 0, 0)
-    glTranslatef(0, 0, 0)  
-    glutSolidCube(60) # Take cube size as the parameter
-    glTranslatef(0, 0, 100) 
-    glColor3f(0, 1, 0)
-    glutSolidCube(60) 
-
-    glColor3f(1, 1, 0)
-    glScalef(2, 2, 2)
-    gluCylinder(gluNewQuadric(), 40, 5, 150, 10, 10)  # parameters are: quadric, base radius, top radius, height, slices, stacks
-    glTranslatef(100, 0, 100) 
-    glRotatef(90, 0, 1, 0)  # parameters are: angle, x, y, z
-    gluCylinder(gluNewQuadric(), 40, 5, 150, 10, 10)
-
-    glColor3f(0, 1, 1)
-    glTranslatef(300, 0, 100) 
-    gluSphere(gluNewQuadric(), 80, 10, 10)  # parameters are: quadric, radius, slices, stacks
-
-    glPopMatrix()  # Restore the previous matrix state
-
-
-def keyboardListener(key, x, y):
-    """
-    Handles keyboard inputs for player movement, gun rotation, camera updates, and cheat mode toggles.
-    """
-    global camera_height
-    # # Move forward (W key)
-    if key == b'i':
-
-        camera_height -= 50
-
-    if key == b'o':
-
-        camera_height += 50
-
-    # # Move backward (S key)
-    # if key == b's':
-
-    # # Rotate gun left (A key)
-    # if key == b'a':
-
-    # # Rotate gun right (D key)
-    # if key == b'd':
-
-    # # Toggle cheat mode (C key)
-    # if key == b'c':
-
-    # # Toggle cheat vision (V key)
-    # if key == b'v':
-
-    # # Reset the game if R key is pressed
-    # if key == b'r':
-
-
-def specialKeyListener(key, x, y):
-    
-    global camera_radius, camera_angle
-
-    if key == GLUT_KEY_LEFT:
-        camera_angle += 5  # Rotate left
-    elif key == GLUT_KEY_RIGHT:
-        camera_angle -= 5  # Rotate right
-    elif key == GLUT_KEY_UP:
-        if camera_radius != 1:
-                if camera_radius == 50:
-                        camera_radius -= 49
-                else:
-                    camera_radius -= 50
-          # Zoom in
-    elif key == GLUT_KEY_DOWN:
-        
-        camera_radius += 50  # Zoom out
-
-#     """
-#     Handles special key inputs (arrow keys) for adjusting the camera angle and height.
-#     """
-#     global camera_pos
-#     x, y, z = camera_pos
-#     # Move camera up (UP arrow key)
-#     if key == GLUT_KEY_UP:
-#         y += 10
-#     # Move camera down (DOWN arrow key)
-#     if key == GLUT_KEY_DOWN:
-#         y-=10
-#     # moving camera left (LEFT arrow key)
-#     if key == GLUT_KEY_LEFT:
-#         x -= 10  # Small angle decrement for smooth movement
-
-#     # moving camera right (RIGHT arrow key)
-#     if key == GLUT_KEY_RIGHT:
-#         x += 10  # Small angle increment for smooth movement
-
-#     camera_pos = (x, y, z)
-
-
-def mouseListener(button, state, x, y):
-    """
-    Handles mouse inputs for firing bullets (left click) and toggling camera mode (right click).
-    """
-        # # Left mouse button fires a bullet
-        # if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN:
-
-        # # Right mouse button toggles camera tracking mode
-        # if button == GLUT_RIGHT_BUTTON and state == GLUT_DOWN:
-
-
-
-def setupCamera():
-    """
-    Configures the camera's projection and view settings.
-    Uses a perspective projection and positions the camera to look at the target.
-    """
-    glMatrixMode(GL_PROJECTION)  # Switch to projection matrix mode
-    glLoadIdentity()  # Reset the projection matrix
-    # Set up a perspective projection (field of view, aspect ratio, near clip, far clip)
-    gluPerspective(fovY, 0.88, 0.1, 4000) # Think why aspect ration is 1.25?
-    glMatrixMode(GL_MODELVIEW)  # Switch to model-view matrix mode
-    glLoadIdentity()  # Reset the model-view matrix
-    
-    # polar to cartesian
-        
-    angle_rad = math.radians(camera_angle)
-    x = camera_radius * math.sin(angle_rad)
-    y = camera_radius * math.cos(angle_rad)
-    z = camera_height  # Fixed height 
-
-    
-    # Position the camera and set its orientation
-    gluLookAt(x, y, z,  # Camera position
-              0, 0, 0,  # Look-at target
-              0, 0, 1)  # Up vector (z-axis)
-
-
-def idle():
-    """
-    Idle function that runs continuously:
-    - Triggers screen redraw for real-time updates.
-    """
-    # Ensure the screen updates with the latest changes
-    glutPostRedisplay()
-
-
-def showScreen():
-    """
-    Display function to render the game scene:
-    - Clears the screen and sets up the camera.
-    - Draws everything of the screen
-    """
-    # Clear color and depth buffers
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-    glLoadIdentity()  # Reset modelview matrix
-    glViewport(0, 0, 960, 1080)  # Set viewport size
-
-    setupCamera()  # Configure camera perspective
-
-    # Draw a random points
-    # glPointSize(20)
-    # glBegin(GL_POINTS)
-    # glColor3f(1,0,0)
-    # glVertex3f(-1000, -1000, 0)
-    # glEnd()
-
-    # Draw the grid (game floor)
-    glBegin(GL_QUADS)
-    
-    glColor3f(0.8, 0.52, 0.25)
-    glVertex3f(-1000, -1000, 0)
-    glVertex3f(-1000, 1000, 0)
-    glVertex3f(1000, 1000, 0)
-    glVertex3f(1000, -1000, 0)
-
-    
-   
+def fire_patch(x1, y1, x2, y2):
+    # Draw the boundary of the fire patch.
+    cuboids((x1, y1), (x1, y2), (x2, y2), (x2, y1), 2, (1.0, 0.4, 0.0))
+    global fire_particles
+    base_height = 5.0
+
+    # Initialize particles on the first run.
+    if not fire_particles:
+        for _ in range(NUM_PARTICLES):
+            # Create each particle with a random position and starting life.
+            ix = random.uniform(x1, x2)
+            iy = random.uniform(y1, y2)
+            life = random.uniform(0.0, FIRE_MAX_HEIGHT)
+            fire_particles.append([ix, iy, 0.0, life])
+
+    glPointSize(3)
+    glBegin(GL_POINTS)
+
+    for p in fire_particles:
+        # Move spark up by increasing its 'life'.
+        p[3] += FIRE_SPEED
+
+        # If spark is too high, reset it at the bottom.
+        if p[3] > FIRE_MAX_HEIGHT:
+            p[0] = random.uniform(x1, x2)
+            p[1] = random.uniform(y1, y2)
+            p[3] = 0.0
+            continue
+
+        # Z position is based on life.
+        p[2] = base_height + p[3]
+        # Ratio from 1.0 (bottom) to 0.0 (top) for color fade.
+        life_ratio = 1.0 - (p[3] / FIRE_MAX_HEIGHT)
+        # Fade color from yellow to red.
+        glColor3f(1.0, life_ratio * 0.5, 0.0)
+        glVertex3f(p[0], p[1], p[2])
     glEnd()
 
-    draw_walls()
-    # Display game info text at a fixed screen position
-    # draw_text(10, 770, f"A Random Fixed Position Text")
-    # draw_text(10, 740, f"See how the position and variable change?: {rand_var}")
+def spikes_patch(p1, p2):
+    global spike_quadric
 
-    # draw_shapes()
+    # Spike properties.
+    SPIKE_HEIGHT = 100.0
+    SPIKE_RADIUS = 15.0
+    NUM_SPIKES = 6
+    
+    # Define animation phase durations.
+    PAUSE_DURATION = 0.5
+    MOVE_DURATION = 0.2
+    CYCLE_DURATION = 2 * PAUSE_DURATION + 2 * MOVE_DURATION
 
-    # Swap buffers for smooth rendering (double buffering)
-    glutSwapBuffers()
+    # Get current position in the animation cycle.
+    time_in_cycle = time.time() % CYCLE_DURATION
+    
+    # Define when each phase ends.
+    phase1_end = PAUSE_DURATION
+    phase2_end = phase1_end + MOVE_DURATION
+    phase3_end = phase2_end + PAUSE_DURATION
 
+    # Determine animation progress (0.0=down, 1.0=up) based on the current phase.
+    if time_in_cycle < phase1_end:
+        # Phase 1: Paused down.
+        animation_progress = 0.0
+    elif time_in_cycle < phase2_end:
+        # Phase 2: Moving up, smoothed with a sine curve.
+        progress = (time_in_cycle - phase1_end) / MOVE_DURATION
+        animation_progress = (math.sin(progress * math.pi - math.pi / 2) + 1) / 2
+    elif time_in_cycle < phase3_end:
+        # Phase 3: Paused up.
+        animation_progress = 1.0
+    else:
+        # Phase 4: Moving down.
+        progress = (time_in_cycle - phase3_end) / MOVE_DURATION
+        animation_progress = 1.0 - ((math.sin(progress * math.pi - math.pi / 2) + 1) / 2)
 
-# Main function to set up OpenGL window and loop
-def main():
-    glutInit()
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)  # Double buffering, RGB color, depth test
-    glutInitWindowSize(960, 1080)  # Window size
-    glutInitWindowPosition(0, 0)  # Window position
-    wind = glutCreateWindow(b"3D OpenGL Intro")  # Create the window
+    # Convert progress to a Z-offset for translation.
+    z_offset = -SPIKE_HEIGHT + animation_progress * SPIKE_HEIGHT
 
-    glutDisplayFunc(showScreen)  # Register display function
-    glutKeyboardFunc(keyboardListener)  # Register keyboard listener
-    glutSpecialFunc(specialKeyListener)
-    glutMouseFunc(mouseListener)
-    glutIdleFunc(idle)  # Register the idle function to move the bullet automatically
+    # Initialize the cylinder object once.
+    if spike_quadric is None:
+        spike_quadric = gluNewQuadric()
 
-    glutMainLoop()  # Enter the GLUT main loop
+    glColor3f(0.75, 0.75, 0.75)
 
+    # Calculate spike positions.
+    x1, y1 = p1
+    x2, y2 = p2
+    dx, dy = x2 - x1, y2 - y1
+    distance = math.sqrt(dx**2 + dy**2)
+    if distance == 0: return
 
-if __name__ == "__main__":
-    main()
+    # Get a normalized direction vector.
+    norm_dx, norm_dy = dx / distance, dy / distance
+    # Offset start/end points by radius so spikes fit perfectly.
+    start_center_x = x1 + norm_dx * SPIKE_RADIUS
+    start_center_y = y1 + norm_dy * SPIKE_RADIUS
+    end_center_x = x2 - norm_dx * SPIKE_RADIUS
+    end_center_y = y2 - norm_dy * SPIKE_RADIUS
+    center_dx = end_center_x - start_center_x
+    center_dy = end_center_y - start_center_y
+
+    for i in range(NUM_SPIKES):
+        # Position spike along the line.
+        fraction = i / (NUM_SPIKES - 1) if NUM_SPIKES > 1 else 0.5
+        spike_x = start_center_x + center_dx * fraction
+        spike_y = start_center_y + center_dy * fraction
+
+        glPushMatrix()
+        # Move to spike's base position.
+        glTranslatef(spike_x, spike_y, 0)
+        # Apply vertical animation.
+        glTranslatef(0, 0, z_offset)
+        # Draw spike as a cone.
+        gluCylinder(spike_quadric, SPIKE_RADIUS, 0.0, SPIKE_HEIGHT, 16, 1)
+        glPopMatrix()
+
+def draw_traps():
+
+    water_patch(co[10],co[1],co[12],co[2])
+    fire_patch(co[3],co[5],co[4],co[8])
+    spikes_patch((co[13],co[10]), (co[14],co[10]))
+    spikes_patch((co[12],co[16]), (co[12],co[15]))
