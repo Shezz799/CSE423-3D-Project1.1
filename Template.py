@@ -1,6 +1,7 @@
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
+import math
 
 colors = { 'WHITE':(1.0, 1.0, 1.0),
         'LILAC':(0.85, 0.75, 0.95),
@@ -14,13 +15,19 @@ colors = { 'WHITE':(1.0, 1.0, 1.0),
 
 
 # Camera-related variables
-# camera_pos = (0,-1000,1000)
+camera_pos = (0,-1000,1000)
 
-camera_pos = (0,0,2000)
+# camera_pos = (0,0,2000)
 
 fovY = 120  # Field of view
 GRID = 1000  # Length of grid lines
 rand_var = 423
+
+
+
+camera_radius = 2000  # Distance from origin
+camera_angle = 0      # Angle around origin in degrees
+
 
 # Maze variables
 p = 170
@@ -351,6 +358,100 @@ def draw_walls():
             (co[21],co[11]), (co[21],co[10]), 
              height, colors["BROWN"])
     
+
+
+    cuboids((co[6],co[8]), (co[6],co[11]), 
+            (co[7],co[11]), (co[7],co[8]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[6],co[8]), (co[6],co[9]), 
+            (co[9],co[9]), (co[9],co[8]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[10],co[5]), (co[10],co[11]), 
+            (co[11],co[11]), (co[11],co[5]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[10],co[8]), (co[10],co[9]), 
+            (co[13],co[9]), (co[13],co[8]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[16],co[6]), (co[16],co[11]), 
+            (co[17],co[11]), (co[17],co[6]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[16],co[8]), (co[16],co[9]), 
+            (co[23],co[9]), (co[23],co[8]), 
+             height, colors["BROWN"])
+    
+
+
+    cuboids((co[2],co[0]), (co[2],co[8]), 
+            (co[3],co[8]), (co[3],co[0]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[4],co[6]), (co[4],co[7]), 
+            (co[6],co[7]), (co[6],co[6]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[8],co[2]), (co[8],co[9]), 
+            (co[9],co[9]), (co[9],co[2]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[12],co[6]), (co[12],co[7]), 
+            (co[17],co[7]), (co[17],co[6]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[18],co[6]), (co[18],co[7]), 
+            (co[20],co[7]), (co[20],co[6]), 
+             height, colors["BROWN"])
+    
+
+    cuboids((co[4],co[4]), (co[4],co[5]), 
+            (co[9],co[5]), (co[9],co[4]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[12],co[2]), (co[12],co[7]), 
+            (co[13],co[7]), (co[13],co[2]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[14],co[5]), (co[14],co[7]), 
+            (co[15],co[7]), (co[15],co[5]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[17],co[4]), (co[17],co[5]), 
+            (co[23],co[5]), (co[23],co[4]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[18],co[5]), (co[18],co[7]), 
+            (co[19],co[7]), (co[19],co[5]), 
+             height, colors["BROWN"])
+    
+
+    cuboids((co[4],co[3]), (co[4],co[5]), 
+            (co[5],co[5]), (co[5],co[3]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[6],co[2]), (co[6],co[3]), 
+            (co[10],co[3]), (co[10],co[2]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[12],co[2]), (co[12],co[3]), 
+            (co[14],co[3]), (co[14],co[2]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[19],co[2]), (co[19],co[3]), 
+            (co[23],co[3]), (co[23],co[2]), 
+             height, colors["BROWN"])
+    
+    cuboids((co[6],co[0]), (co[6],co[3]), 
+            (co[7],co[3]), (co[7],co[0]),
+             height, colors["BROWN"])
+    
+    cuboids((co[16],co[0]), (co[16],co[2]), 
+            (co[17],co[2]), (co[17],co[0]),
+             height, colors["BROWN"])
+    
 def draw_shapes():
 
     glPushMatrix()  # Save the current matrix state
@@ -402,26 +503,44 @@ def keyboardListener(key, x, y):
 
 
 def specialKeyListener(key, x, y):
-    """
-    Handles special key inputs (arrow keys) for adjusting the camera angle and height.
-    """
-    global camera_pos
-    x, y, z = camera_pos
-    # Move camera up (UP arrow key)
-    if key == GLUT_KEY_UP:
-        y += 10
-    # Move camera down (DOWN arrow key)
-    if key == GLUT_KEY_DOWN:
-        y-=10
-    # moving camera left (LEFT arrow key)
+    
+    global camera_radius, camera_angle
+
     if key == GLUT_KEY_LEFT:
-        x -= 10  # Small angle decrement for smooth movement
+        camera_angle += 5  # Rotate left
+    elif key == GLUT_KEY_RIGHT:
+        camera_angle -= 5  # Rotate right
+    elif key == GLUT_KEY_UP:
+        if camera_radius != 1:
+                if camera_radius == 50:
+                        camera_radius -= 49
+                else:
+                    camera_radius -= 50
+          # Zoom in
+    elif key == GLUT_KEY_DOWN:
+        
+        camera_radius += 50  # Zoom out
 
-    # moving camera right (RIGHT arrow key)
-    if key == GLUT_KEY_RIGHT:
-        x += 10  # Small angle increment for smooth movement
+#     """
+#     Handles special key inputs (arrow keys) for adjusting the camera angle and height.
+#     """
+#     global camera_pos
+#     x, y, z = camera_pos
+#     # Move camera up (UP arrow key)
+#     if key == GLUT_KEY_UP:
+#         y += 10
+#     # Move camera down (DOWN arrow key)
+#     if key == GLUT_KEY_DOWN:
+#         y-=10
+#     # moving camera left (LEFT arrow key)
+#     if key == GLUT_KEY_LEFT:
+#         x -= 10  # Small angle decrement for smooth movement
 
-    camera_pos = (x, y, z)
+#     # moving camera right (RIGHT arrow key)
+#     if key == GLUT_KEY_RIGHT:
+#         x += 10  # Small angle increment for smooth movement
+
+#     camera_pos = (x, y, z)
 
 
 def mouseListener(button, state, x, y):
@@ -444,12 +563,18 @@ def setupCamera():
     glMatrixMode(GL_PROJECTION)  # Switch to projection matrix mode
     glLoadIdentity()  # Reset the projection matrix
     # Set up a perspective projection (field of view, aspect ratio, near clip, far clip)
-    gluPerspective(fovY, 0.88, 0.1, 3000) # Think why aspect ration is 1.25?
+    gluPerspective(fovY, 0.88, 0.1, 4000) # Think why aspect ration is 1.25?
     glMatrixMode(GL_MODELVIEW)  # Switch to model-view matrix mode
     glLoadIdentity()  # Reset the model-view matrix
+    
+    # polar to cartesian
+        
+    angle_rad = math.radians(camera_angle)
+    x = camera_radius * math.cos(angle_rad)
+    y = camera_radius * math.sin(angle_rad)
+    z = 1000  # Fixed height 
 
-    # Extract camera position and look-at target
-    x, y, z = camera_pos
+    
     # Position the camera and set its orientation
     gluLookAt(x, y, z,  # Camera position
               0, 0, 0,  # Look-at target
