@@ -427,6 +427,7 @@ def keyboardListener(key, x, y):
             _move_along_facing(player_yaw)
         elif key in (b's', b'S'):
             _move_along_facing((player_yaw + 180.0) % 360.0)
+        # toggle first-person view
         elif key in (b'f', b'F'):
             first_person = not first_person
             if not first_person:
