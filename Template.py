@@ -15,7 +15,7 @@ colors = { 'WHITE':(1.0, 1.0, 1.0),
 
 
 # Camera-related variables
-camera_pos = (0,-1000,1000)
+# camera_pos = (0,-1000,1000)
 
 # camera_pos = (0,0,2000)
 
@@ -27,6 +27,7 @@ rand_var = 423
 
 camera_radius = 2000  # Distance from origin
 camera_angle = 0      # Angle around origin in degrees
+camera_height = 1500
 
 
 # Maze variables
@@ -480,8 +481,15 @@ def keyboardListener(key, x, y):
     """
     Handles keyboard inputs for player movement, gun rotation, camera updates, and cheat mode toggles.
     """
+    global camera_height
     # # Move forward (W key)
-    # if key == b'w':  
+    if key == b'i':
+
+        camera_height -= 50
+
+    if key == b'o':
+
+        camera_height += 50
 
     # # Move backward (S key)
     # if key == b's':
@@ -570,9 +578,9 @@ def setupCamera():
     # polar to cartesian
         
     angle_rad = math.radians(camera_angle)
-    x = camera_radius * math.cos(angle_rad)
-    y = camera_radius * math.sin(angle_rad)
-    z = 1000  # Fixed height 
+    x = camera_radius * math.sin(angle_rad)
+    y = camera_radius * math.cos(angle_rad)
+    z = camera_height  # Fixed height 
 
     
     # Position the camera and set its orientation
