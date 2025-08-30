@@ -4,7 +4,7 @@ from OpenGL.GLU import *
 import math, time
 import random
 
-# Global for the gluCylinder object to avoid recreating it
+#avoids recreation
 spike_quadric = None
 
 colors = { 'WHITE':(1.0, 1.0, 1.0),
