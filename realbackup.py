@@ -79,36 +79,14 @@ player_x = (co[1] + co[2]) // 2
 player_y = (co[19] + co[20]) // 2
 player_movement_speed = 20.0
 player_radius = 5.0
-player_hp = 100
-
-# Enemy config
-attack_range = 250.0  # spotting/attack start distance
-ENEMY_CHASE_SPEED = 20.0  # move speed toward player when in range
-ENEMY_RADIUS = 12.0  # for contact damage detection
-
-# Convenience: compute center of a maze grid cell using co[]
-def _cell_center(ix, iy):
-    return ((co[ix] + co[ix+1]) // 2, (co[iy] + co[iy+1]) // 2)
-
-# Editable spawn list (7 enemies). Modify these to place enemies.
-ENEMY_SPAWNS = [
-    _cell_center(2, 19),
-    _cell_center(6, 19),
-    _cell_center(12, 10),
-    _cell_center(16, 10),
-    _cell_center(12, 16),
-    _cell_center(18, 6),
-    _cell_center(20, 14),
-]
-
-# Runtime enemy state
-enemies = []  # each: {x, y, yaw, last_hit_time}
-_enemies_initialized = False
 
 # Mouse camera control variables
 mouse_x = 480  # Center of window width (960/2)
 mouse_y = 540  # Center of window height (1080/2)
 mouse_sensitivity = 0.12
+
+
+
 
 
 
@@ -218,11 +196,8 @@ def build_walls_rects():
 # Build the walls list once at startup
 build_walls_rects()
 
-def draw_text(x, y, text, font=GLUT_BITMAP_HELVETICA_18, color=None):
-    if color is not None:
-        glColor3f(*color)
-    else:
-        glColor3f(1,1,1)
+def draw_text(x, y, text, font=GLUT_BITMAP_HELVETICA_18):
+    glColor3f(1,1,1)
     glMatrixMode(GL_PROJECTION)
     glPushMatrix()
     glLoadIdentity()
@@ -407,136 +382,6 @@ def draw_character(position):
 
     glPopMatrix()
 #=============== Character Model===============
-
-
-#=============== Enemy NPCs ===============
-
-def _draw_enemy(position, yaw=None):
-    # Zombie/bloody palette
-    palette = {
-        'skin': (0.35, 0.75, 0.35),
-        'shirt': (0.6, 0.0, 0.0),
-        'pants': (0.15, 0.15, 0.18),
-        'boots': (0.1, 0.05, 0.05),
-    }
-    # Reuse character model with different colors
-    x, y, z = position
-    glPushMatrix()
-    glTranslatef(x, y, z)
-    if yaw is not None:
-        glRotatef(yaw, 0.0, 0.0, 1.0)
-
-    # Draw with palette
-    # Legs
-    torso_w, torso_d, torso_h = CHAR_TORSO
-    head_w, head_d, head_h = CHAR_HEAD
-    arm_w, arm_d, arm_h = CHAR_ARM
-    leg_w, leg_d, leg_h = CHAR_LEG
-
-    pants = palette['pants']
-    boots = palette['boots']
-    leg_x_offset = (torso_w * 0.33)
-    leg_y_offset = (torso_d * 0.25)
-    leg_z = leg_h * 0.5
-    glPushMatrix(); glTranslatef(-leg_x_offset, -leg_y_offset, leg_z)
-    _draw_cuboid(leg_w, leg_d, leg_h, pants)
-    glTranslatef(0.0, 0.0, -leg_h * 0.5 + 10.0)
-    _draw_cuboid(leg_w, leg_d, 16.0, boots)
-    glPopMatrix()
-    glPushMatrix(); glTranslatef(+leg_x_offset, +leg_y_offset, leg_z)
-    _draw_cuboid(leg_w, leg_d, leg_h, pants)
-    glTranslatef(0.0, 0.0, -leg_h * 0.5 + 10.0)
-    _draw_cuboid(leg_w, leg_d, 16.0, boots)
-    glPopMatrix()
-
-    # Torso
-    shirt = palette['shirt']
-    torso_z = leg_h + torso_h * 0.5
-    glPushMatrix(); glTranslatef(0.0, 0.0, torso_z)
-    _draw_cuboid(torso_w, torso_d, torso_h, shirt)
-    glPopMatrix()
-
-    # Arms
-    skin = palette['skin']
-    arm_x_offset = torso_w * 0.5 + arm_w * 0.55
-    arm_y_offset = torso_d * 0.05
-    arm_z = leg_h + torso_h - arm_h * 0.5 + 5.0
-    glPushMatrix(); glTranslatef(-arm_x_offset, -arm_y_offset, arm_z)
-    _draw_cuboid(arm_w, arm_d, arm_h, skin)
-    glTranslatef(0.0, 0.0, -arm_h * 0.5 + 10.0)
-    _draw_cuboid(arm_w, arm_d, 20.0, skin)
-    glPopMatrix()
-    glPushMatrix(); glTranslatef(+arm_x_offset, +arm_y_offset, arm_z)
-    _draw_cuboid(arm_w, arm_d, arm_h, skin)
-    glTranslatef(0.0, 0.0, -arm_h * 0.5 + 10.0)
-    _draw_cuboid(arm_w, arm_d, 20.0, skin)
-    glPopMatrix()
-
-    # Head
-    head_z = leg_h + torso_h + head_h * 0.5 + 4.0
-    glPushMatrix(); glTranslatef(0.0, 0.0, head_z)
-    _draw_cuboid(head_w, head_d, head_h, skin)
-    glPopMatrix()
-
-    glPopMatrix()
-
-
-def init_enemies():
-    global enemies, _enemies_initialized
-    if _enemies_initialized:
-        return
-    enemies.clear()
-    for (sx, sy) in ENEMY_SPAWNS:
-        enemies.append({
-            'x': float(sx),
-            'y': float(sy),
-            'yaw': 0.0,
-            'last_hit_time': None,
-        })
-    _enemies_initialized = True
-
-
-def update_enemies(dt):
-    global player_hp
-    if not enemies:
-        return
-    now = time.perf_counter()
-    for e in enemies:
-        dx = player_x - e['x']
-        dy = player_y - e['y']
-        dist = math.hypot(dx, dy)
-        if dist <= attack_range:
-            # face player and walk slowly toward
-            if dist > 1e-4:
-                e['yaw'] = math.degrees(math.atan2(dx, dy))
-            step = ENEMY_CHASE_SPEED * dt
-            if step > 0:
-                nx = e['x'] + (dx / dist) * step
-                ny = e['y'] + (dy / dist) * step
-                if is_valid_position(nx, ny):
-                    e['x'], e['y'] = nx, ny
-                elif is_valid_position(nx, e['y']):
-                    e['x'] = nx
-                elif is_valid_position(e['x'], ny):
-                    e['y'] = ny
-        # contact damage
-        if dist <= (player_radius + ENEMY_RADIUS):
-            if e['last_hit_time'] is None or (now - e['last_hit_time']) >= 2.0:
-                player_hp = max(0, player_hp - 10)
-                e['last_hit_time'] = now
-        else:
-            e['last_hit_time'] = None
-
-
-def draw_enemies(spawns=None):
-    # If spawns provided, update ENEMY_SPAWNS and re-init once
-    global ENEMY_SPAWNS
-    if spawns is not None and len(spawns) == 7:
-        ENEMY_SPAWNS = [(float(x), float(y)) for (x, y) in spawns]
-    init_enemies()
-    for e in enemies:
-        _draw_enemy((e['x'], e['y'], 0.0), yaw=e['yaw'])
-
 
 
 #============ First person ============
@@ -903,18 +748,7 @@ def idle():
 #     global water_animation_time
 #     water_animation_time += 0.2
     # Ensure the screen updates with the latest changes
-    global _prev_time_for_enemies
-    now = time.perf_counter()
-    if '_prev_time_for_enemies' not in globals() or _prev_time_for_enemies is None:
-        _prev_time_for_enemies = now
-    dt = max(0.0, now - _prev_time_for_enemies)
-    _prev_time_for_enemies = now
-    try:
-        update_enemies(dt)
-    except Exception as _e:
-        print('[EnemyUpdateError]', _e)
     glutPostRedisplay()
-
 
 
 def showScreen():
@@ -952,19 +786,15 @@ def showScreen():
 
     draw_walls()
     draw_traps()
-    draw_enemies([
-        ENEMY_SPAWNS[0], ENEMY_SPAWNS[1], ENEMY_SPAWNS[2],
-        ENEMY_SPAWNS[3], ENEMY_SPAWNS[4], ENEMY_SPAWNS[5], ENEMY_SPAWNS[6]
-    ])
     draw_character((player_x, player_y, 0.0))
     # Display game info text at a fixed screen position
     # draw_text(10, 770, f"A Random Fixed Position Text")
     # draw_text(10, 740, f"See how the position and variable change?: {rand_var}")
-    draw_text(10, 770, f"Health = {player_hp}", color=colors["GREEN"]) 
+
     # draw_shapes()
 
     # Swap buffers for smooth rendering (double buffering)
-    glutSwapBuffers()   
+    glutSwapBuffers()
 
 
 # Main function to set up OpenGL window and loop
