@@ -86,6 +86,16 @@ attack_range = 250.0  # spotting/attack start distance
 ENEMY_CHASE_SPEED = 20.0  # move speed toward player when in range
 ENEMY_RADIUS = 12.0  # for contact damage detection
 
+# Shooting config/state (modeled after shooter.py)
+BULLET_SPEED = 20.0          # shooter.py uses 10 in its units; our world is larger, so use 20 per frame
+BULLET_SIZE = 4.0            # only used if we switch to cubes; we will draw GL_POINTS per spec
+BULLET_MAX_DIST = 2000.0
+ENEMY_HIT_RADIUS = 35.0      # approximate body hit radius like shooter.py's ENEMY_BASE_RADIUS
+MAX_AMMO = 30
+ammo_remaining = MAX_AMMO
+bullets = []                 # each: {x, y, z, dir_deg, dist, alive}
+gun_quadric = None           # for overlay cylinder
+
 # Convenience: compute center of a maze grid cell using co[]
 def _cell_center(ix, iy):
     return ((co[ix] + co[ix+1]) // 2, (co[iy] + co[iy+1]) // 2)
@@ -411,7 +421,7 @@ def draw_character(position):
 
 #=============== Enemy NPCs ===============
 
-def _draw_enemy(position, yaw=None):
+def _draw_enemy(position, yaw=None, down=False):
     # Zombie/bloody palette
     palette = {
         'skin': (0.35, 0.75, 0.35),
@@ -425,6 +435,10 @@ def _draw_enemy(position, yaw=None):
     glTranslatef(x, y, z)
     if yaw is not None:
         glRotatef(yaw, 0.0, 0.0, 1.0)
+    if down:
+        # Rotate to lay flat on the floor
+        glRotatef(90.0, 1.0, 0.0, 0.0)
+        glTranslatef(0.0, 0.0, CHAR_LEG[2] + CHAR_TORSO[2] * 0.5)
 
     # Draw with palette
     # Legs
@@ -492,6 +506,7 @@ def init_enemies():
             'y': float(sy),
             'yaw': 0.0,
             'last_hit_time': None,
+            'down': False,
         })
     _enemies_initialized = True
 
@@ -502,6 +517,9 @@ def update_enemies(dt):
         return
     now = time.perf_counter()
     for e in enemies:
+        if e.get('down'):
+            # Downed enemies don't move or deal damage
+            continue
         dx = player_x - e['x']
         dy = player_y - e['y']
         dist = math.hypot(dx, dy)
@@ -535,7 +553,97 @@ def draw_enemies(spawns=None):
         ENEMY_SPAWNS = [(float(x), float(y)) for (x, y) in spawns]
     init_enemies()
     for e in enemies:
-        _draw_enemy((e['x'], e['y'], 0.0), yaw=e['yaw'])
+        _draw_enemy((e['x'], e['y'], 0.0), yaw=e['yaw'], down=e.get('down', False))
+
+
+# ------------------------------
+# Shooting (shooter.py-like)
+# ------------------------------
+def fire_bullet():
+    global ammo_remaining
+    if ammo_remaining <= 0:
+        return
+    # Spawn from just in front of the player at roughly chest height
+    rad = math.radians(player_yaw)
+    bx = player_x + 48.0 * math.sin(rad)
+    by = player_y + 48.0 * math.cos(rad)
+    bz = (CHAR_LEG[2] + CHAR_TORSO[2]) - 10.0
+    bullets.append({
+        'x': bx, 'y': by, 'z': bz,
+        'dir_deg': float(player_yaw),
+        'dist': 0.0,
+        'alive': True,
+    })
+    ammo_remaining -= 1
+
+
+def update_bullets():
+    # Follow shooter.py logic: per-frame step without dt scale
+    for b in bullets:
+        if not b['alive']:
+            continue
+        rad = math.radians(b['dir_deg'])
+        b['x'] += BULLET_SPEED * math.sin(rad)
+        b['y'] += BULLET_SPEED * math.cos(rad)
+        b['dist'] += BULLET_SPEED
+        # Bounds / lifetime
+        if not (co[0] < b['x'] < co[23] and co[0] < b['y'] < co[23] and b['dist'] < BULLET_MAX_DIST):
+            b['alive'] = False
+            continue
+        # Collide with enemies; knock them down
+        for e in enemies:
+            if e.get('down'):
+                continue
+            dx = b['x'] - e['x']
+            dy = b['y'] - e['y']
+            if math.hypot(dx, dy) <= ENEMY_HIT_RADIUS:
+                e['down'] = True
+                b['alive'] = False
+                break
+
+
+def draw_bullets():
+    glPointSize(6.0)
+    glBegin(GL_POINTS)
+    glColor3f(1.0, 0.2, 0.1)
+    for b in bullets:
+        if b.get('alive', False):
+            glVertex3f(b['x'], b['y'], b['z'])
+    glEnd()
+
+
+def draw_gun_overlay():
+    # Draw a simple cylinder as a viewmodel kept fixed to the screen in first person
+    if not first_person:
+        return
+    global gun_quadric
+    if gun_quadric is None:
+        gun_quadric = gluNewQuadric()
+    # Draw in screen-space orthographic to keep it fixed
+    glDisable(GL_DEPTH_TEST)
+    glMatrixMode(GL_PROJECTION)
+    glPushMatrix()
+    glLoadIdentity()
+    # Use a Z range wide enough to contain the cylinder after rotation
+    glOrtho(0, 960, 0, 1080, -200, 200)
+    glMatrixMode(GL_MODELVIEW)
+    glPushMatrix()
+    glLoadIdentity()
+    # Position bottom-center and yaw a little to the left
+    glPushMatrix()
+    # Center X (960/2=480), align near bottom Y, slight Z for depth within ortho range
+    glTranslatef(480, 60, 50)
+    # Point cylinder downwards (screen-space) then yaw slightly left
+    glRotatef(-90, 1, 0, 0)
+    glRotatef(12, 0, 0, 1)
+    glColor3f(0.45, 0.45, 0.5)
+    gluCylinder(gun_quadric, 20.0, 12.0, 140.0, 20, 1)
+    glPopMatrix()
+    glPopMatrix()
+    glMatrixMode(GL_PROJECTION)
+    glPopMatrix()
+    glMatrixMode(GL_MODELVIEW)
+    glEnable(GL_DEPTH_TEST)
 
 
 
@@ -829,12 +937,12 @@ def mouseListener(button, state, x, y):
     """
     Handles mouse inputs for firing bullets (left click) and toggling camera mode (right click).
     """
-    # # Left mouse button fires a bullet
-    # if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN:
-
-    # # Right mouse button toggles camera tracking mode
-    # if button == GLUT_RIGHT_BUTTON and state == GLUT_DOWN:
-    pass
+    if state == GLUT_DOWN:
+        if button == GLUT_LEFT_BUTTON:
+            fire_bullet()
+        elif button == GLUT_RIGHT_BUTTON:
+            global first_person
+            first_person = not first_person
 
 def mouseMotionListener(x, y):
     """
@@ -911,8 +1019,9 @@ def idle():
     _prev_time_for_enemies = now
     try:
         update_enemies(dt)
+        update_bullets()
     except Exception as _e:
-        print('[EnemyUpdateError]', _e)
+        print('[UpdateError]', _e)
     glutPostRedisplay()
 
 
@@ -957,6 +1066,8 @@ def showScreen():
         ENEMY_SPAWNS[3], ENEMY_SPAWNS[4], ENEMY_SPAWNS[5], ENEMY_SPAWNS[6]
     ])
     draw_character((player_x, player_y, 0.0))
+    draw_bullets()
+    draw_gun_overlay()
     # Display game info text at a fixed screen position
     # draw_text(10, 770, f"A Random Fixed Position Text")
     # draw_text(10, 740, f"See how the position and variable change?: {rand_var}")
