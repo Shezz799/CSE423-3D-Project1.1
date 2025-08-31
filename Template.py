@@ -5,6 +5,9 @@ import math, time
 import random
 from OpenGL.GLUT import GLUT_BITMAP_HELVETICA_18
 
+
+player_alive = True
+
 #avoids recreation
 spike_quadric = None
 top_down_mode = False
@@ -933,34 +936,47 @@ def keyboardListener(key, x, y):
     """
     global camera_height, player_x, player_y, camera_angle, player_yaw, eye_height, first_person, CHEAT_ON
 
-    if key in (b'w', b'W', b's', b'S', b'a', b'A', b'd', b'D', b'i', b'I', b'o', b'O', b'f', b'F', b'c', b'C'):
+    
+
+    # --- Universal Keys (work in both modes) ---
+    if key in (b'c', b'C'):
+        CHEAT_ON = not CHEAT_ON
+    elif key in (b'i', b'I'):
+        camera_height -= 50
+        eye_height = max(20.0, eye_height - 10.0)
+    elif key in (b'o', b'O'):
+        camera_height += 50
+        eye_height = min(250.0, eye_height + 10.0)
+
+    # --- Mode-Specific Movement ---
+    if CHEAT_ON:
+        # In cheat mode, movement is absolute (North, South, West, East).
+        new_x, new_y = player_x, player_y
+        step = player_movement_speed
+        if key in (b'w', b'W'):
+            new_y += step  # Move Up (North)
+        elif key in (b's', b'S'):
+            new_y -= step  # Move Down (South)
+        elif key in (b'a', b'A'):
+            new_x -= step  # Move Left (West)
+        elif key in (b'd', b'D'):
+            new_x += step  # Move Right (East)
+        
+        # Apply the new position only if it's valid (not inside a wall).
+        if is_valid_position(new_x, new_y):
+            player_x, player_y = new_x, new_y
+    else:
+        # In first-person mode, movement is relative to where the player is facing.
         if key in (b'd', b'D'):
             player_yaw = (player_yaw + yaw_step) % 360.0
-            camera_angle = (camera_angle + yaw_step) % 360.0
         elif key in (b'a', b'A'):
             player_yaw = (player_yaw - yaw_step) % 360.0
-            camera_angle = (camera_angle - yaw_step) % 360.0
         elif key in (b'w', b'W'):
             _move_along_facing(player_yaw)
         elif key in (b's', b'S'):
             _move_along_facing((player_yaw + 180.0) % 360.0)
-        # toggle first-person view
-        # elif key in (b'f', b'F'):
-        #     first_person = not first_person
-        #     if not first_person:
-        #         camera_angle = player_yaw % 360.0
-        elif key in ( b'c', b'C'):
-            CHEAT_ON = not CHEAT_ON
-            
 
-        # Camera height adjust
-        if key in (b'i', b'I'):
-            camera_height -= 50
-            eye_height = max(20.0, eye_height - 10.0)
-        if key in (b'o', b'O'):
-            camera_height += 50
-            eye_height = min(250.0, eye_height + 10.0)
-        return
+    glutPostRedisplay() # Request a redraw after any input.
 
 
 def specialKeyListener(key, x, y):
@@ -1144,6 +1160,7 @@ def showScreen():
     #     draw_minimap()
     final_run()
     draw_walls()
+    draw_crushing_walls()
     
     draw_traps()
     draw_enemies([
