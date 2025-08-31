@@ -5,18 +5,8 @@ import math, time
 import random
 from OpenGL.GLUT import GLUT_BITMAP_HELVETICA_18
 
-
-player_alive = True
-
-#avoids recreation
+# Global for the gluCylinder object to avoid recreating it
 spike_quadric = None
-top_down_mode = False
-#Final Run
-
-final_run_active = False      
-final_run_start_time = 0.0      
-game_won = False                
-CRUSHING_WALL_SPEED = 25.0  
 
 colors = { 'WHITE':(1.0, 1.0, 1.0),
         'LILAC':(0.85, 0.75, 0.95),
@@ -39,7 +29,7 @@ WAVE_SUBDIV = 20      # Grid resolution for the water surface
 WAVE_AMPLITUDE = 3.0  # How high the waves are
 
 
-CHEAT_ON = False
+
 
 fovY = 120  # Field of view
 GRID = 1000  # Length of grid lines
@@ -84,16 +74,35 @@ while True:
 print(co)
 
 
-# Player variables
-# player_x = (co[1] + co[2]) // 2
-# player_y = (co[19] + co[20]) // 2
-
-player_x = 600
-player_y = -700
-
+# Player position variables
+player_x = (co[1] + co[2]) // 2
+player_y = (co[19] + co[20]) // 2
 player_movement_speed = 20.0
 player_radius = 5.0
 player_hp = 100
+
+# Feature 8: Stamina System
+player_stamina = 100.0
+max_stamina = 100.0
+stamina_regen_rate = 0.02
+stamina_drain_rate = 8.0
+stamina_jump_cost = 25.0
+is_sprinting = False
+is_jumping = False
+last_stamina_update = 0
+
+# Feature 10: Jump Mechanic
+player_z = 0.0
+jump_height = 80.0
+jump_speed = 8.0
+jump_gravity = 0.8
+jump_velocity = 0.0
+jump_forward_velocity = 0.0
+jump_forward_speed = 15.0
+is_grounded = True
+is_jumping_forward = False
+jump_cooldown = 0
+jump_cooldown_max = 10
 
 # Enemy config
 attack_range = 250.0  # spotting/attack start distance
@@ -116,13 +125,13 @@ def _cell_center(ix, iy):
 
 # Editable spawn list (7 enemies). Modify these to place enemies.
 ENEMY_SPAWNS = [
-    _cell_center(2-1, 19),
-    _cell_center(6-1, 19),
-    _cell_center(12-1, 10),
-    _cell_center(16-1, 10),
-    _cell_center(12-1, 16),
-    _cell_center(18-1, 6),
-    _cell_center(20-1, 14),
+    _cell_center(2, 19),
+    _cell_center(6, 19),
+    _cell_center(12, 10),
+    _cell_center(16, 10),
+    _cell_center(12, 16),
+    _cell_center(18, 6),
+    _cell_center(20, 14),
 ]
 
 # Runtime enemy state
@@ -242,6 +251,249 @@ def build_walls_rects():
 # Build the walls list once at startup
 build_walls_rects()
 
+# Stamina System Functions
+def update_stamina():
+    global player_stamina, is_sprinting, is_jumping, last_stamina_update
+    
+    if is_sprinting and player_stamina > 0:
+        player_stamina = max(0.0, player_stamina - stamina_drain_rate)
+    
+    if not is_sprinting and player_stamina < max_stamina:
+        player_stamina = min(max_stamina, player_stamina + stamina_regen_rate)
+    
+    if player_stamina <= 0:
+        is_sprinting = False
+
+def draw_stamina_bar():
+    bar_width = 200
+    bar_height = 20
+    bar_x = 10
+    bar_y = 720
+    
+    glMatrixMode(GL_PROJECTION)
+    glPushMatrix()
+    glLoadIdentity()
+    gluOrtho2D(0, 1000, 0, 800)
+    
+    glMatrixMode(GL_MODELVIEW)
+    glPushMatrix()
+    glLoadIdentity()
+    
+    glColor3f(0.3, 0.3, 0.3)
+    glBegin(GL_QUADS)
+    glVertex3f(bar_x, bar_y, 0)
+    glVertex3f(bar_x + bar_width, bar_y, 0)
+    glVertex3f(bar_x + bar_width, bar_y + bar_height, 0)
+    glVertex3f(bar_x, bar_y + bar_height, 0)
+    glEnd()
+    
+    stamina_ratio = player_stamina / max_stamina
+    bar_fill_width = bar_width * stamina_ratio
+    
+    if stamina_ratio > 0.5:
+        glColor3f(0.0, 0.5, 1.0)
+    elif stamina_ratio > 0.25:
+        glColor3f(0.3, 0.7, 1.0)
+    else:
+        glColor3f(1.0, 0.0, 0.0)
+    
+    glBegin(GL_QUADS)
+    glVertex3f(bar_x, bar_y, 0)
+    glVertex3f(bar_x + bar_fill_width, bar_y, 0)
+    glVertex3f(bar_x + bar_fill_width, bar_y + bar_height, 0)
+    glVertex3f(bar_x, bar_y + bar_height, 0)
+    glEnd()
+    
+    glColor3f(1.0, 1.0, 1.0)
+    glBegin(GL_LINE_LOOP)
+    glVertex3f(bar_x, bar_y, 0)
+    glVertex3f(bar_x + bar_width, bar_y, 0)
+    glVertex3f(bar_x + bar_width, bar_y + bar_height, 0)
+    glVertex3f(bar_x, bar_y + bar_height, 0)
+    glEnd()
+    
+    glPopMatrix()
+    glMatrixMode(GL_PROJECTION)
+    glPopMatrix()
+    glMatrixMode(GL_MODELVIEW)
+
+# Jump Mechanic Functions
+def update_jump():
+    global player_z, jump_velocity, jump_forward_velocity, is_grounded, is_jumping_forward, jump_cooldown, player_x, player_y
+    
+    if jump_cooldown > 0:
+        jump_cooldown -= 1
+    
+    if not is_grounded:
+        jump_velocity -= jump_gravity
+        player_z += jump_velocity
+        
+        if is_jumping_forward:
+            rad = math.radians(player_yaw)
+            forward_dx = math.sin(rad) * jump_forward_velocity
+            forward_dy = math.cos(rad) * jump_forward_velocity
+            
+            new_x = player_x + forward_dx
+            new_y = player_y + forward_dy
+            
+            if is_valid_jump_position(new_x, new_y):
+                player_x = new_x
+                player_y = new_y
+            
+            jump_forward_velocity = max(0, jump_forward_velocity - 0.5)
+        
+        if player_z <= 0:
+            player_z = 0
+            jump_velocity = 0
+            jump_forward_velocity = 0
+            is_grounded = True
+            is_jumping_forward = False
+            is_jumping = False
+    else:
+        if player_z <= 0:
+            player_z = 0
+            jump_velocity = 0
+            jump_forward_velocity = 0
+            is_grounded = True
+            is_jumping_forward = False
+            is_jumping = False
+
+def perform_jump():
+    global is_jumping, jump_velocity, jump_forward_velocity, is_grounded, is_jumping_forward, jump_cooldown, player_stamina
+    
+    if (is_grounded and jump_cooldown <= 0 and 
+        player_stamina >= stamina_jump_cost):
+        is_jumping = True
+        is_jumping_forward = True
+        jump_velocity = jump_speed
+        jump_forward_velocity = jump_forward_speed
+        is_grounded = False
+        jump_cooldown = jump_cooldown_max
+        player_stamina -= stamina_jump_cost
+
+def is_valid_jump_position(x, y):
+    if not is_valid_position(x, y):
+        return False
+    return True
+
+def get_jump_height_multiplier():
+    stamina_ratio = player_stamina / max_stamina
+    return 0.6 + (stamina_ratio * 0.4)
+
+def draw_jump_direction_indicator():
+    if is_grounded and jump_cooldown <= 0:
+        rad = math.radians(player_yaw)
+        indicator_length = 50.0
+        
+        start_x = player_x
+        start_y = player_y
+        start_z = player_z + 5
+        
+        end_x = player_x + math.sin(rad) * indicator_length
+        end_y = player_y + math.cos(rad) * indicator_length
+        end_z = start_z + 20
+        
+        glColor3f(1.0, 1.0, 0.0)
+        glLineWidth(3.0)
+        glBegin(GL_LINES)
+        glVertex3f(start_x, start_y, start_z)
+        glVertex3f(end_x, end_y, end_z)
+        glEnd()
+        glLineWidth(1.0)
+
+# Enhanced Movement Functions
+def enhanced_move_along_facing(forward_deg: float, is_sprint: bool = False):
+    global player_x, player_y, player_movement_speed
+    
+    current_speed = player_movement_speed
+    if is_sprint and player_stamina > 0:
+        current_speed *= 1.8
+    elif player_stamina <= 0:
+        current_speed *= 0.5
+    
+    step = current_speed
+    rad = math.radians(forward_deg)
+    dx = step * math.sin(rad)
+    dy = step * math.cos(rad)
+    new_x = player_x + dx
+    new_y = player_y + dy
+    
+    if is_valid_jump_position(new_x, new_y):
+        player_x, player_y = new_x, new_y
+
+# Enhanced Character Drawing
+def draw_character_with_jump(position):
+    x, y, z = position
+    total_z = z + player_z
+    
+    skin = (1.0, 0.85, 0.7)
+    shirt = (0.2, 0.5, 0.9)
+    pants = (0.15, 0.25, 0.55)
+    boots = (0.25, 0.12, 0.05)
+
+    torso_w, torso_d, torso_h = CHAR_TORSO
+    head_w, head_d, head_h = CHAR_HEAD
+    arm_w, arm_d, arm_h = CHAR_ARM
+    leg_w, leg_d, leg_h = CHAR_LEG
+
+    glPushMatrix()
+    glTranslatef(x, y, total_z)
+
+    try:
+        glRotatef(player_yaw, .0, 0.0, 1.0)
+    except NameError:
+        pass
+
+    leg_x_offset = (torso_w * 0.33)
+    leg_y_offset = (torso_d * 0.25)
+    leg_z = leg_h * 0.5
+
+    glPushMatrix()
+    glTranslatef(-leg_x_offset, -leg_y_offset, leg_z)
+    _draw_cuboid(leg_w, leg_d, leg_h, pants)
+    glTranslatef(0.0, 0.0, -leg_h * 0.5 + 10.0)
+    _draw_cuboid(leg_w, leg_d, 16.0, boots)
+    glPopMatrix()
+
+    glPushMatrix()
+    glTranslatef(+leg_x_offset, +leg_y_offset, leg_z)
+    _draw_cuboid(leg_w, leg_d, leg_h, pants)
+    glTranslatef(0.0, 0.0, -leg_h * 0.5 + 10.0)
+    _draw_cuboid(leg_w, leg_d, 16.0, boots)
+    glPopMatrix()
+
+    torso_z = leg_h + torso_h * 0.5
+    glPushMatrix()
+    glTranslatef(0.0, 0.0, torso_z)
+    _draw_cuboid(torso_w, torso_d, torso_h, shirt)
+    glPopMatrix()
+
+    arm_x_offset = torso_w * 0.5 + arm_w * 0.55
+    arm_y_offset = torso_d * 0.05
+    arm_z = leg_h + torso_h - arm_h * 0.5 + 5.0
+
+    glPushMatrix()
+    glTranslatef(-arm_x_offset, -arm_y_offset, arm_z)
+    _draw_cuboid(arm_w, arm_d, arm_h, skin)
+    glTranslatef(0.0, 0.0, -arm_h * 0.5 + 10.0)
+    _draw_cuboid(arm_w, arm_d, 20.0, skin)
+    glPopMatrix()
+
+    glPushMatrix()
+    glTranslatef(+arm_x_offset, +arm_y_offset, arm_z)
+    _draw_cuboid(arm_w, arm_d, arm_h, skin)
+    glTranslatef(0.0, 0.0, -arm_h * 0.5 + 10.0)
+    _draw_cuboid(arm_w, arm_d, 20.0, skin)
+    glPopMatrix()
+
+    head_z = leg_h + torso_h + head_h * 0.5 + 4.0
+    glPushMatrix()
+    glTranslatef(0.0, 0.0, head_z)
+    _draw_cuboid(head_w, head_d, head_h, skin)
+    glPopMatrix()
+
+    glPopMatrix()
+
 def draw_text(x, y, text, font=GLUT_BITMAP_HELVETICA_18, color=None):
     if color is not None:
         glColor3f(*color)
@@ -308,8 +560,6 @@ def cuboids(p1, p2, p3, p4, h, color):
     glVertex3f(p4[0], p4[1], 0)
 
     #top
-    # glColor3f(*colors['BLACK'])
-
     glVertex3f(p1[0], p1[1], h)
     glVertex3f(p2[0], p2[1], h)
     glVertex3f(p3[0], p3[1], h)
@@ -358,7 +608,6 @@ def _draw_cuboid(w, d, h, color):
     glPopMatrix()
 
 def draw_character(position):
-    
     x, y, z = position
 
     # palette
@@ -428,34 +677,9 @@ def draw_character(position):
     # Head
     head_z = leg_h + torso_h + head_h * 0.5 + 4.0
     glPushMatrix()
-    if CHEAT_ON:
-        
-        glTranslatef(0.0, 0.0, head_z)
-        glScalef(1,1,30)
-        _draw_cuboid(head_w, head_d, head_h,(1.0,0.0,0.0))
-
-    else:
-        glTranslatef(0.0, 0.0, head_z)
-        _draw_cuboid(head_w, head_d, head_h, skin)
+    glTranslatef(0.0, 0.0, head_z)
+    _draw_cuboid(head_w, head_d, head_h, skin)
     glPopMatrix()
-
-    # if CHEAT_ON:
-    #     # Define the marker's appearance.
-    #     marker_height = 250.0
-    #     marker_radius = 10.0
-        
-    #     glPushMatrix() # Isolate the marker's transformations.
-        
-    #     # Move to the character's position and then up to the top of its head.
-    #     glTranslatef(x, y, z + 50) # z+50 is the top of the head sphere
-
-    #     # Set the marker color to bright red.
-    #     glColor3f(1.0, 0.0, 0.0)
-
-    #     # Draw the tall cylinder.
-    #     gluCylinder(spike_quadric, marker_radius, marker_radius, marker_height, 12, 1)
-        
-    #     glPopMatrix()
 
     glPopMatrix()
 #=============== Character Model===============
@@ -709,84 +933,6 @@ def _move_along_facing(forward_deg: float):
     if is_valid_position(new_x, new_y):
         player_x, player_y = new_x, new_y
 
-def draw_crushing_walls():
-    
-    if not final_run_active:
-        return
-
-    
-    elapsed_time = time.time() - final_run_start_time
-    
-    
-    travel_distance = co[4] - co[3]
-    
-    
-    current_offset = min(travel_distance, elapsed_time * CRUSHING_WALL_SPEED)
-
-    # --- 2. Draw the Bottom Wall ---
-    glPushMatrix() # Save the current matrix state
-
-    # Translate the wall. It starts at y=co[2] and moves up.
-    glTranslatef(0, current_offset, 0)
-    
-    # Define the wall's static shape (it never changes).
-    p1 = (co[19], co[2])
-    p2 = (co[19], co[3])
-    p3 = (co[23], co[3])
-    p4 = (co[23], co[2])
-    cuboids(p1, p2, p3, p4, height, colors['BROWN'])
-    
-    glPopMatrix() # Restore the matrix state
-
-    # --- 3. Draw the Top Wall ---
-    glPushMatrix() # Save the current matrix state again
-
-    # Translate the wall. It starts at y=co[5] and moves down.
-    glTranslatef(0, -current_offset, 0)
-
-    # Define the wall's static shape.
-    p1 = (co[19], co[4])
-    p2 = (co[19], co[5])
-    p3 = (co[23], co[5])
-    p4 = (co[23], co[4])
-    cuboids(p1, p2, p3, p4, height, colors['BROWN'])
-    
-    glPopMatrix() # Restore the matrix state
-
-def final_run():
-    """
-    Manages the logic for the final escape sequence.
-    Triggers the event and checks for win/loss conditions.
-    """
-    global final_run_active, final_run_start_time, player_alive, game_won
-
-    # 1. Trigger the final run sequence if it hasn't started yet.
-    # This happens when the player crosses the line at x=co[19] in the correct corridor.
-    if not final_run_active and player_x >= co[19] and co[3] <= player_y <= co[4]:
-        final_run_active = True
-        final_run_start_time = time.time()
-        print("--- FINAL RUN ACTIVATED! ESCAPE! ---")
-
-    # 2. If the sequence is active, continuously check for win or loss.
-    if final_run_active and player_alive:
-        elapsed_time = time.time() - final_run_start_time
-
-        # Calculate the current position of the walls' leading edges.
-        wall1_edge = co[2] + elapsed_time * CRUSHING_WALL_SPEED
-        wall2_edge = co[5] - elapsed_time * CRUSHING_WALL_SPEED
-
-        # WIN CONDITION: Player reaches the safety line at x=co[23].
-        if player_x >= co[23]:
-            game_won = True
-            player_alive = False
-            print("--- YOU ESCAPED! YOU WIN! ---")
-
-        # LOSS CONDITION: The walls meet before the player escapes.
-        elif wall1_edge >= wall2_edge:
-            player_alive = False
-            print("--- YOU WERE CRUSHED! GAME OVER. ---")
-    
-
 #============ First person ============
 
 
@@ -828,9 +974,6 @@ def water_patch(x1, y1, x2, y2):
             glVertex3f(vx1, vy1, z11)
             glVertex3f(vx0, vy1, z01)
     glEnd()
-
-
-
 
 def fire_patch(x1, y1, x2, y2):
     # Draw the boundary of the fire patch.
@@ -955,141 +1098,77 @@ def draw_traps():
     spikes_patch((co[13],co[10]), (co[14],co[10]))
     spikes_patch((co[12],co[16]), (co[12],co[15]))
 
-# def draw_minimap():
-    # """
-    # Renders a 2D map by first drawing a solid background quad, which
-    # avoids interfering with the main scene's depth buffer.
-    # """
-    # # 1. Define the map's screen area
-    # win_w = glutGet(GLUT_WINDOW_WIDTH)
-    # win_h = glutGet(GLUT_WINDOW_HEIGHT)
-    # map_size = 250
-    # margin = 20
-    # map_x_start = win_w - map_size - margin
-    # map_y_start = margin
 
-    # # 2. Set the viewport to the map area
-    # glViewport(map_x_start, map_y_start, map_size, map_size)
+def draw_shapes():
 
-    # # 3. Temporarily switch to a simple 2D projection for the background
-    # glMatrixMode(GL_PROJECTION)
-    # glPushMatrix()
-    # glLoadIdentity()
-    # # This ortho matches the viewport pixel for pixel
-    # gluOrtho2D(0, map_size, 0, map_size)
+    glPushMatrix()  # Save the current matrix state
+    glColor3f(1, 0, 0)
+    glTranslatef(0, 0, 0)  
+    glutSolidCube(60) # Take cube size as the parameter
+    glTranslatef(0, 0, 100) 
+    glColor3f(0, 1, 0)
+    glutSolidCube(60) 
 
-    # glMatrixMode(GL_MODELVIEW)
-    # glPushMatrix()
-    # glLoadIdentity()
+    glColor3f(1, 1, 0)
+    glScalef(2, 2, 2)
+    gluCylinder(gluNewQuadric(), 40, 5, 150, 10, 10)  # parameters are: quadric, base radius, top radius, height, slices, stacks
+    glTranslatef(100, 0, 100) 
+    glRotatef(90, 0, 1, 0)  # parameters are: angle, x, y, z
+    gluCylinder(gluNewQuadric(), 40, 5, 150, 10, 10)
 
-    # # --- THE FIX: Draw a background quad ---
-    # # Disable depth testing so this quad draws on top of the 3D world
-    # glDisable(GL_DEPTH_TEST)
+    glColor3f(0, 1, 1)
+    glTranslatef(300, 0, 100) 
+    gluSphere(gluNewQuadric(), 80, 10, 10)  # parameters are: quadric, radius, slices, stacks
 
-    # # Draw a dark gray quad that covers the entire minimap area
-    # glColor3f(0.1, 0.1, 0.1) # Dark background color
-    # glBegin(GL_QUADS)
-    # glVertex2f(0, 0)
-    # glVertex2f(map_size, 0)
-    # glVertex2f(map_size, map_size)
-    # glVertex2f(0, map_size)
-    # glEnd()
-
-    # # The background is drawn. Now, re-enable depth testing for the map contents.
-    # glEnable(GL_DEPTH_TEST)
-    # # Clear the depth buffer ONLY for the map area to ensure map elements draw correctly.
-    # glClear(GL_DEPTH_BUFFER_BIT)
-
-    # # Restore the previous matrices
-    # glMatrixMode(GL_PROJECTION)
-    # glPopMatrix()
-    # glMatrixMode(GL_MODELVIEW)
-    # glPopMatrix()
-    # # --- END OF FIX ---
-
-    # # 4. Set up the actual map's top-down camera view
-    # glMatrixMode(GL_PROJECTION)
-    # glPushMatrix()
-    # glLoadIdentity()
-    # view_range = 800.0
-    # glOrtho(player_x - view_range, player_x + view_range,
-    #         player_y - view_range, player_y + view_range,
-    #         -1000, 1000)
-
-    # glMatrixMode(GL_MODELVIEW)
-    # glPushMatrix()
-    # glLoadIdentity()
-
-    # # 5. Draw the map contents (walls and player)
-    # draw_walls()
-    # glPointSize(10)
-    # glColor3f(1.0, 0.0, 0.0) # Red dot for player
-    # glBegin(GL_POINTS)
-    # glVertex2f(player_x, player_y)
-    # glEnd()
-
-    # # 6. Restore all states for the next frame
-    # glMatrixMode(GL_PROJECTION)
-    # glPopMatrix()
-    # glMatrixMode(GL_MODELVIEW)
-    # glPopMatrix()
-
-    # # CRITICAL: Reset the viewport to the full window
-    # glViewport(0, 0, win_w, win_h)
+    glPopMatrix()  # Restore the previous matrix state
 
 
 def keyboardListener(key, x, y):
     """
     Handles keyboard inputs for player movement, gun rotation, camera updates, and cheat mode toggles.
     """
-    global camera_height, player_x, player_y, camera_angle, player_yaw, eye_height, first_person, CHEAT_ON
+    global camera_height, player_x, player_y, camera_angle, player_yaw, eye_height, first_person, is_sprinting
 
-    
+    # Handle jump separately (independent of movement)
+    if key == b' ':  # Spacebar for jumping
+        perform_jump()
+        return
 
-    # --- Universal Keys (work in both modes) ---
-    if key in (b'c', b'C'):
-        CHEAT_ON = not CHEAT_ON
-    elif key in (b'i', b'I'):
-        camera_height -= 50
-        eye_height = max(20.0, eye_height - 10.0)
-    elif key in (b'o', b'O'):
-        camera_height += 50
-        eye_height = min(250.0, eye_height + 10.0)
+    # Handle sprint with keyboard (alternative to shift)
+    if key in (b'x', b'X', b'p', b'P', b't', b'T'):  # X, P, or T key for sprint toggle
+        is_sprinting = not is_sprinting
+        return
 
-    # --- Mode-Specific Movement ---
-    if CHEAT_ON:
-        # In cheat mode, movement is absolute (North, South, West, East).
-        new_x, new_y = player_x, player_y
-        step = player_movement_speed
-        if key in (b'w', b'W'):
-            new_y += step  # Move Up (North)
-        elif key in (b's', b'S'):
-            new_y -= step  # Move Down (South)
-        elif key in (b'a', b'A'):
-            new_x -= step  # Move Left (West)
-        elif key in (b'd', b'D'):
-            new_x += step  # Move Right (East)
-        
-        # Apply the new position only if it's valid (not inside a wall).
-        if is_valid_position(new_x, new_y):
-            player_x, player_y = new_x, new_y
-    else:
-        # In first-person mode, movement is relative to where the player is facing.
+    if key in (b'w', b'W', b's', b'S', b'a', b'A', b'd', b'D', b'i', b'I', b'o', b'O', b'f', b'F'):
         if key in (b'd', b'D'):
             player_yaw = (player_yaw + yaw_step) % 360.0
+            camera_angle = (camera_angle + yaw_step) % 360.0
         elif key in (b'a', b'A'):
             player_yaw = (player_yaw - yaw_step) % 360.0
+            camera_angle = (camera_angle - yaw_step) % 360.0
         elif key in (b'w', b'W'):
-            _move_along_facing(player_yaw)
+            enhanced_move_along_facing(player_yaw, is_sprinting)
         elif key in (b's', b'S'):
-            _move_along_facing((player_yaw + 180.0) % 360.0)
+            enhanced_move_along_facing((player_yaw + 180.0) % 360.0, is_sprinting)
+        # toggle first-person view
+        elif key in (b'f', b'F'):
+            first_person = not first_person
+            if not first_person:
+                camera_angle = player_yaw % 360.0
 
-    glutPostRedisplay() # Request a redraw after any input.
+        # Camera height adjust
+        if key in (b'i', b'I'):
+            camera_height -= 50
+            eye_height = max(20.0, eye_height - 10.0)
+        if key in (b'o', b'O'):
+            camera_height += 50
+            eye_height = min(250.0, eye_height + 10.0)
+        return
 
 
 def specialKeyListener(key, x, y):
     
-    global camera_radius, camera_angle, player_yaw, first_person
+    global camera_radius, camera_angle, player_yaw, first_person, is_sprinting
 
     if key == GLUT_KEY_LEFT:
         camera_angle = (camera_angle + 3) % 360.0  # Rotate left
@@ -1107,6 +1186,9 @@ def specialKeyListener(key, x, y):
                     camera_radius -= 50
     elif key == GLUT_KEY_DOWN:
         camera_radius += 50  # Zoom out
+    elif key in (16, 17, 112, 113):  # Various shift key codes and P key
+        is_sprinting = not is_sprinting
+        return
 
 #     """
 #     Handles special key inputs (arrow keys) for adjusting the camera angle and height.
@@ -1177,23 +1259,7 @@ def setupCamera():
     glMatrixMode(GL_MODELVIEW)  # Switch to model-view matrix mode
     glLoadIdentity()  # Reset the model-view matrix
     
-    
-    if CHEAT_ON:
-        
-    # Put camera at center of maze, high above, looking down
-        maze_center_x = 0
-        maze_center_y = 0
-
-        camera_x = maze_center_x
-        camera_y = maze_center_y
-        camera_z = 1500   # height so all corners are visible
-
-        gluLookAt(camera_x, camera_y, camera_z,
-                maze_center_x, maze_center_y, 0.0,   # look straight down
-                0, 1, 0)  # up vector = Y (so maze isn't rotated oddly)
-    
-    else:
-
+    if first_person:
         camera_angle = player_yaw
         angle_rad = math.radians(player_yaw)
         camera_x = player_x
@@ -1205,14 +1271,22 @@ def setupCamera():
         gluLookAt(camera_x, camera_y, camera_z,
                   target_x, target_y, target_z,
                   0, 0, 1)
+    else:
+        angle_rad = math.radians(camera_angle)
+        camera_offset_x = camera_radius * math.sin(angle_rad)
+        camera_offset_y = camera_radius * math.cos(angle_rad)
+        camera_x = player_x + camera_offset_x
+        camera_y = player_y + camera_offset_y
+        camera_z = camera_height
+        gluLookAt(camera_x, camera_y, camera_z,
+                  player_x, player_y, 50.0,
+                  0, 0, 1)
 
 def idle():
     """
     Idle function that runs continuously:
     - Triggers screen redraw for real-time updates.
     """
-
-    
 #     global water_animation_time
 #     water_animation_time += 0.2
     # Ensure the screen updates with the latest changes
@@ -1225,6 +1299,8 @@ def idle():
     try:
         update_enemies(dt)
         update_bullets()
+        update_stamina()
+        update_jump()
     except Exception as _e:
         print('[UpdateError]', _e)
     glutPostRedisplay()
@@ -1260,29 +1336,25 @@ def showScreen():
     glVertex3f(1000, 1000, 0)
     glVertex3f(1000, -1000, 0)
 
+    
+   
     glEnd()
 
-
-
-    # if CHEAT_ON:
-
-    #     draw_minimap()
-    final_run()
     draw_walls()
-    draw_crushing_walls()
-    
     draw_traps()
     draw_enemies([
         ENEMY_SPAWNS[0], ENEMY_SPAWNS[1], ENEMY_SPAWNS[2],
         ENEMY_SPAWNS[3], ENEMY_SPAWNS[4], ENEMY_SPAWNS[5], ENEMY_SPAWNS[6]
     ])
-    draw_character((player_x, player_y, 0.0))
+    draw_character_with_jump((player_x, player_y, 0.0))
+    draw_jump_direction_indicator()
     draw_bullets()
     draw_gun_overlay()
     # Display game info text at a fixed screen position
     # draw_text(10, 770, f"A Random Fixed Position Text")
     # draw_text(10, 740, f"See how the position and variable change?: {rand_var}")
-    draw_text(10, 770, f"Health = {player_hp}", color=colors["GREEN"]) 
+    draw_text(10, 770, f"Health = {player_hp}", color=colors["GREEN"])
+    draw_text(10, 740, f"Stamina: {player_stamina:.1f}/100")
     # draw_shapes()
 
     # Swap buffers for smooth rendering (double buffering)
@@ -1312,4 +1384,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    

@@ -116,13 +116,13 @@ def _cell_center(ix, iy):
 
 # Editable spawn list (7 enemies). Modify these to place enemies.
 ENEMY_SPAWNS = [
-    _cell_center(2, 19),
-    _cell_center(6, 19),
-    _cell_center(12, 10),
-    _cell_center(16, 10),
-    _cell_center(12, 16),
-    _cell_center(18, 6),
-    _cell_center(20, 14),
+    _cell_center(2-1, 19),
+    _cell_center(6-1, 19),
+    _cell_center(12-1, 10),
+    _cell_center(16-1, 10),
+    _cell_center(12-1, 16),
+    _cell_center(18-1, 6),
+    _cell_center(20-1, 14),
 ]
 
 # Runtime enemy state
