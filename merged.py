@@ -4,14 +4,12 @@ from OpenGL.GLU import *
 import math, time, random
 from OpenGL.GLUT import GLUT_BITMAP_HELVETICA_18
 
-# ------------------------------
-# Global flags/state (union of both files)
-# ------------------------------
+
 player_alive = True
 CHEAT_ON = False            # Top-down cheat camera + absolute movement
 first_person = True         # Toggle with 'f' or right mouse
 
-# Final run (crushing walls) from maze_runner.py
+
 final_run_active = False
 final_run_start_time = 0.0
 game_won = False
@@ -80,8 +78,8 @@ while True:
 print(co)
 
 # Player position and stats
-player_x = 600.0              # from maze_runner.py
-player_y = -700.0
+player_x = (co[1] + co[2]) // 2 #600
+player_y = (co[19] + co[20]) // 2 # -700
 player_movement_speed = 20.0
 player_radius = 5.0
 player_hp = 100

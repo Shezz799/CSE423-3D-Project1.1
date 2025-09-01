@@ -88,8 +88,8 @@ print(co)
 # player_x = (co[1] + co[2]) // 2
 # player_y = (co[19] + co[20]) // 2
 
-player_x = 600
-player_y = -700
+player_x = (co[1] + co[2]) // 2 #600
+player_y = (co[19] + co[20]) // 2 # -700
 
 player_movement_speed = 20.0
 player_radius = 5.0
