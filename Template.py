@@ -1226,7 +1226,7 @@ def idle():
         update_enemies(dt)
         update_bullets()
     except Exception as _e:
-        print('[UpdateError]', _e)
+        print()
     glutPostRedisplay()
 
 

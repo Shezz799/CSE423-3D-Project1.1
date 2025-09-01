@@ -908,15 +908,10 @@ def mouseListener(button, state, x, y):
 	if state == GLUT_DOWN:
 		if button == GLUT_LEFT_BUTTON:
 			fire_bullet()
-		elif button == GLUT_RIGHT_BUTTON:
-			first_person = not first_person
+		# elif button == GLUT_RIGHT_BUTTON:
+		# 	first_person = not first_person
 
 
-def mouseMotionListener(x, y):
-	global camera_angle, mouse_x, mouse_y
-	delta_x = x - mouse_x
-	camera_angle = (camera_angle - delta_x * mouse_sensitivity + 360.0) % 360.0
-	mouse_x = x; mouse_y = y
 
 
 # --------------- Camera/loop/render ---------------
@@ -963,7 +958,7 @@ def idle():
 		update_stamina()
 		update_jump()
 	except Exception as _e:
-		print('[UpdateError]', _e)
+		print()
 	glutPostRedisplay()
 
 
@@ -1014,7 +1009,6 @@ def main():
 	glutKeyboardFunc(keyboardListener)
 	glutSpecialFunc(specialKeyListener)
 	glutMouseFunc(mouseListener)
-	glutMotionFunc(mouseMotionListener)
 	glutIdleFunc(idle)
 	glutMainLoop()
 
